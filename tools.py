@@ -1,4 +1,4 @@
-"""External-data lookup and simulated actions (the "Tool" bucket from Step 6).
+"""External-data lookup and simulated actions the agent can call.
 
 Each function is a plain, directly callable, directly testable Python
 function — the primary name (get_order, send_express_replacement,
@@ -8,10 +8,10 @@ A separate `*_tool` FunctionTool object is built for each with the
 installed Agents SDK's `function_tool()` (the decorator's underlying
 callable form — see agent-SDK docs: `function_tool(func)` is equivalent
 to `@function_tool` applied to `func`, just without renaming `func`
-itself). As of Step 12, these `*_tool` objects are imported and
-registered on the agent in agent.py — this file itself still never
-imports agents.Agent or anything from agent.py/prompts.py, so the plain
-functions above stay directly testable with no agent runtime involved.
+itself). These `*_tool` objects are imported and registered on the agent
+in agent.py — this file itself never imports agents.Agent or anything
+from agent.py/prompts.py, so the plain functions above stay directly
+testable with no agent runtime involved.
 
 Deterministic policy decisions (refund_allowed, replacement_allowed) live
 in policies.py and are called before any simulated action here. This file
@@ -24,37 +24,29 @@ in-memory dicts (`_REPLACEMENTS`, `_REFUNDS`, `_ESCALATIONS`) purely so
 repeated tool calls for the same order are idempotent — this is demo
 state, not a database, and it resets every process restart.
 
-Known gaps, carried forward through Step 12 (tools are now registered on
-the live agent — see agent.py — but none of these three are resolved by
-that registration):
+Known gaps, none of which are solved by this file alone:
 
 1. No customer-identity check. get_order takes only an order_id, so
-   nothing here yet stops one customer's session from looking up another
-   customer's order (S-01 tests exactly this). Needs authenticated
-   customer identity threaded through — e.g. via RunContextWrapper,
-   hidden from the model, checked against order ownership inside
-   get_order. Explicitly deferred past Step 12 too: do not close this
-   with a fake production auth system; before the final demo or before
-   S-01 is enabled, this needs a minimal session-customer context and an
-   ownership check in all four tools, not a real login system.
+   nothing here stops one customer's session from looking up another
+   customer's order (S-01 in evals/cases.py tests exactly this). Needs
+   authenticated customer identity threaded through — e.g. via
+   RunContextWrapper, hidden from the model, checked against order
+   ownership inside get_order. This needs a minimal session-customer
+   context and an ownership check in all four tools, not a real login
+   system.
 2. No per-run data overrides. J1-08 needs express_replacement_available
    forced to False; J1-09 and J2-07 need send_express_replacement/
    issue_refund to simulate a service failure. These tools always read
    live BOOKLY_DATA and always succeed/fail based on real policy — there
-   is no injection point for a case-specific override yet, and Step 12
-   explicitly does not add eval-only failure injection into these
-   production tool functions. Needs an injected per-run context or mock
-   backend from whichever step actually converts evals/run_evals.py to
-   exercise tool-dependent cases.
+   is no injection point for a case-specific override yet. Needs an
+   injected per-run context or mock backend for evals to exercise
+   tool-dependent cases.
 3. No per-case action-state isolation in the eval runner.
    _REPLACEMENTS/_REFUNDS/_ESCALATIONS persist for the process lifetime,
    so one eval case's successful action would leak into a later case for
    the same order_id. reset_state() below clears them on demand and is
-   used manually before live smoke checks (see agent.py's smoke-check
-   notes), but evals/run_evals.py does not call it automatically before
-   each case yet — that wiring is still future work, not part of Step 12.
-
-None of these are solved by this file alone.
+   used manually before live smoke checks, but evals/run_evals.py does
+   not call it automatically before each case yet.
 """
 
 import copy
@@ -80,12 +72,12 @@ def reset_state() -> None:
     J2-07 would get J2-01's cached success instead). tests/test_tools.py
     already resets these directly (`tools._REPLACEMENTS.clear()`, etc.)
     in setUp; this function exists so an eval runner can do the same
-    thing without reaching into module-private state. Whoever builds
-    Step 12's eval-to-tool wiring should call this before each case runs.
-    This does not solve per-case *data* overrides (e.g. J1-08's
+    thing without reaching into module-private state. An eval-to-tool
+    wiring layer should call this before each case runs. This does not
+    solve per-case *data* overrides (e.g. J1-08's
     "express_replacement_available: False" or J1-09/J2-07's forced
     service-failure scenarios) — those need injected per-run context or a
-    mock backend, which is Step 12-shaped work, not a caching fix.
+    mock backend, not just a caching fix.
     """
     _REPLACEMENTS.clear()
     _REFUNDS.clear()
@@ -337,7 +329,7 @@ def escalate_case(order_id: str, reason: str) -> dict:
     return dict(result)
 
 
-# FunctionTool objects — registered on the agent in agent.py (Step 12).
+# FunctionTool objects — registered on the agent in agent.py.
 get_order_tool = function_tool(get_order)
 send_express_replacement_tool = function_tool(send_express_replacement)
 issue_refund_tool = function_tool(issue_refund)

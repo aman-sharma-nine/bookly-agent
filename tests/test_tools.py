@@ -118,7 +118,7 @@ class IssueRefundTests(ToolTestCase):
         self.assertEqual(first["refund_id"], second["refund_id"])
         self.assertEqual(second["status"], "issued")
 
-    # --- Step 14: issue_refund is the real enforcement point, not just
+    # --- issue_refund is the real enforcement point, not just
     # refund_allowed() in isolation — these confirm the full tool call
     # never reports success outside authority, and that a denied refund
     # leaves no trace in the idempotency cache (so a later legitimate

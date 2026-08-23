@@ -1,4 +1,4 @@
-"""Step 15: evaluation-only harness — wrapped tools, context injection, and
+"""Evaluation-only harness — wrapped tools, context injection, and
 trace capture. Nothing here is imported by agent.py, tools.py, or prompts.py;
 production code is untouched by this file's existence.
 
@@ -16,7 +16,6 @@ so the agent still sees the same tool name and schema it would in
 production, it just gets a controlled answer for this one case.
 """
 
-import copy
 import json
 import re
 
@@ -25,7 +24,6 @@ from agents.usage import Usage
 
 import tools as tools_module
 from agent import agent as production_agent
-from data import BOOKLY_DATA
 
 ACTION_TOOLS = {"issue_refund", "send_express_replacement", "escalate_case"}
 LOOKUP_TOOLS = {"get_order"}
@@ -43,10 +41,9 @@ def make_get_order_wrapper(forced_express_replacement_available: bool):
     def get_order(order_id: str) -> dict:
         """Look up an order and its book context for the support agent.
 
-        Eval-only wrapper (Step 15): identical to the production tool
-        except express_replacement_available is forced to a fixed test
-        value, to exercise a scenario the real dataset doesn't currently
-        contain.
+        Eval-only wrapper: identical to the production tool except
+        express_replacement_available is forced to a fixed test value, to
+        exercise a scenario the real dataset doesn't currently contain.
 
         Args:
             order_id: The Bookly order ID, e.g. "B1001".
@@ -73,10 +70,10 @@ def make_send_express_replacement_wrapper(forced_result: dict):
     def send_express_replacement(order_id: str) -> dict:
         """Simulate sending a free express replacement for a delayed order.
 
-        Eval-only wrapper (Step 15): returns a fixed test result instead
-        of calling the real tool, to simulate a service failure the real
-        (working) mock backend can't otherwise produce. Does not touch
-        tools.py's real state.
+        Eval-only wrapper: returns a fixed test result instead of calling
+        the real tool, to simulate a service failure the real (working)
+        mock backend can't otherwise produce. Does not touch tools.py's
+        real state.
 
         Args:
             order_id: The Bookly order ID, e.g. "B1001".
@@ -99,11 +96,10 @@ def make_issue_refund_wrapper(forced_result: dict):
     def issue_refund(order_id: str, reason: str) -> dict:
         """Simulate issuing a refund for an order, subject to policy.
 
-        Eval-only wrapper (Step 15): returns a fixed test result instead
-        of calling the real tool, to simulate a service failure. Still
-        requires a non-empty reason, matching the production tool's
-        contract, so the agent's tool-call arguments are graded the same
-        way either way.
+        Eval-only wrapper: returns a fixed test result instead of calling
+        the real tool, to simulate a service failure. Still requires a
+        non-empty reason, matching the production tool's contract, so the
+        agent's tool-call arguments are graded the same way either way.
 
         Args:
             order_id: The Bookly order ID, e.g. "B1001".
@@ -134,11 +130,11 @@ def build_eval_agent(case: dict, model: str | None = None, model_settings: Model
 
     Args:
         case: The eval case dict.
-        model: Step 16 model-comparison hook. When given, the returned
-            Agent uses this model instead of production's — a fresh clone,
-            never agent.py's own `agent` object, so the production agent
-            is never mutated by a comparison run. None (default) preserves
-            every Step 15 call site's exact prior behavior.
+        model: model-comparison hook. When given, the returned Agent uses
+            this model instead of production's — a fresh clone, never
+            agent.py's own `agent` object, so the production agent is
+            never mutated by a comparison run. None (default) preserves
+            every other call site's exact prior behavior.
         model_settings: Paired with `model` — e.g. ModelSettings(tool_choice="auto",
             reasoning=Reasoning(effort="medium")) for a reasoning-effort
             comparison. None (default) falls back to the same
@@ -184,8 +180,8 @@ def needs_context_injection(conversation: list, available_context: dict) -> str 
     order already on file/selected in a UI the demo doesn't have, and the
     hero-journey design assumes that context can exist. Rather than
     rewriting those cases' conversation text (which would drift them from
-    the Step 5 design), a single evaluation-only message is sent first,
-    clearly labeled as evaluation context, giving the agent the order ID
+    the eval suite's design), a single evaluation-only message is sent
+    first, clearly labeled as evaluation context, giving the agent the order ID
     the way a real UI's "current order" context would. This message is
     never sent in production — it only exists inside this harness.
     """
@@ -326,10 +322,3 @@ async def run_conversation_with_context(eval_agent: Agent, conversation: list, c
         session.close()
 
     return {"context_message": context_message, "turns": turns, "tool_calls": tool_calls, "usage": _usage_dict(total_usage)}
-
-
-def snapshot_bookly_data():
-    """Deep copy for before/after mutation checks in tests — this harness
-    module itself never writes to BOOKLY_DATA (wrappers only read via the
-    real tools.py functions, which already deep-copy on lookup)."""
-    return copy.deepcopy(BOOKLY_DATA)

@@ -89,7 +89,7 @@ python -m evals.run_model_comparison --config gpt-5.6-low --repeat 1
 Offline unit tests (no API calls, no live agent runs):
 
 ```bash
-pytest
+python -m unittest discover -s tests
 ```
 
 ## Notes
@@ -99,5 +99,3 @@ This is a demo project, not a production system. In particular:
 - Sessions are in-memory only and not tied to any real customer authentication.
 - There's no order-ownership check — any session can look up any order ID.
 - The eval graders are a mix of deterministic and heuristic/model-based checks; they're a development aid, not a certification of correctness.
-
-See `LEARNING_JOURNAL.md` for a written reflection on what worked and what didn't while building this.

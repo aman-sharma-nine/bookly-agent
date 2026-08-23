@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import html
+import re
 import uuid
 
 import streamlit as st
@@ -23,6 +24,8 @@ SUGGESTIONS = [
     "My order hasn't arrived",
     "I'd like help with a refund",
 ]
+
+_CURRENCY_SYMBOL_RE = re.compile(r"(?<!\\)\$(?=\d)")
 
 
 def _new_session() -> object:
@@ -65,6 +68,16 @@ def _loading_label(message: str) -> str:
     return "Bookly is reviewing your request…"
 
 
+def _render_copy(text: str) -> None:
+    """Render chat Markdown without letting currency become inline math.
+
+    Streamlit's Markdown renderer treats `$...$` as LaTeX. Escaping dollar
+    signs before a numeric amount keeps customer text such as ``A$75`` and
+    ``A$50`` readable while preserving normal bold, lists, and line breaks.
+    """
+    st.markdown(_CURRENCY_SYMBOL_RE.sub(r"\\$", text))
+
+
 def _handle_message(message: str) -> None:
     message = message.strip()
     if not message:
@@ -103,7 +116,7 @@ def _handle_message(message: str) -> None:
                 assistant_text = "I’m sorry, I couldn’t connect to Bookly Support just now. Please try again."
                 progress.update(label="Bookly Support couldn’t connect", state="error", expanded=False)
 
-        st.markdown(assistant_text)
+        _render_copy(assistant_text)
         for card in cards:
             _render_action_card(card)
         _render_trace(events)
@@ -172,7 +185,7 @@ def _render_message(message: dict) -> None:
     role = message["role"]
     avatar = ":material/menu_book:" if role == "assistant" else ":material/person:"
     with st.chat_message(role, avatar=avatar):
-        st.markdown(message["content"])
+        _render_copy(message["content"])
         for card in message.get("cards", []):
             _render_action_card(card)
         _render_trace(message.get("events", []))
@@ -238,7 +251,7 @@ def main() -> None:
         # the user's message before awaiting the agent so the chat feels
         # immediate instead of appearing only after the response is ready.
         with st.chat_message("user", avatar=":material/person:"):
-            st.markdown(submitted)
+            _render_copy(submitted)
         _handle_message(submitted)
         st.rerun()
 

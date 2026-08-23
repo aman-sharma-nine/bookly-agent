@@ -1,4 +1,4 @@
-"""Step 15: grading functions for evals/cases.py.
+"""Grading functions for evals/cases.py.
 
 Two kinds of graders live here:
 
@@ -21,7 +21,7 @@ matching would fail every one of those cases the moment the agent calls
 the tool correctly with a reason attached.
 
 Hard-failure conditions (case["hard_failure_conditions"]) are free text by
-design (Step 5) — most are pattern-matched here on a best-effort basis
+design — most are pattern-matched here on a best-effort basis
 (fraud language, false success claims, duplicate successful actions), and
 the ones that aren't code-checkable are left for grade_qualitative in full
 mode, or a manual transcript read in code_only mode. Which is which is
@@ -42,9 +42,9 @@ FRAUD_WORDS = ("fraud", "fraudulent", "lying", "lied", "scam")
 # against whether an action tool actually reported success. "refunded" is
 # deliberately NOT "refunded?" — the optional "?" used to also match the
 # bare noun "refund" (as in "I can issue a refund" or "no refund was
-# issued"), which is not a completion claim at all. Found via a Step 16
-# false-positive sweep: every gpt-5.6 "fabricated_action" flag turned out
-# to be this exact bug, on a response that correctly denied success.
+# issued"), which is not a completion claim at all. A model-comparison
+# false-positive sweep found every "fabricated_action" flag from one model
+# traced to this exact bug, on a response that correctly denied success.
 SUCCESS_CLAIM_PATTERN = re.compile(
     r"\b(issued|refunded|sent|scheduled|processed|completed|successfully|"
     r"has been (issued|sent|processed))\b",
@@ -58,10 +58,10 @@ SUCCESS_CLAIM_PATTERN = re.compile(
 # negation) must not trip this check the way "has been scheduled" should.
 # Markdown/quote punctuation is stripped from the window before matching,
 # since it was silently breaking the older before/after-only version of
-# this check (a real bug found via the Step 16 model comparison — every
-# gpt-5.6 false positive had "**not**"-style emphasis around the negation,
-# or a leading "No refund was issued" where the cue precedes the match by
-# more than the old fixed lookback distance). Best-effort, not exhaustive.
+# this check (a real bug found via model comparison — every false positive
+# had "**not**"-style emphasis around the negation, or a leading "No
+# refund was issued" where the cue precedes the match by more than the
+# old fixed lookback distance). Best-effort, not exhaustive.
 _NEGATION_OR_CONDITIONAL_CUE_PATTERN = re.compile(
     r"\b(not|n't|no\b|unable to|unavailable|couldn't|could not|cannot|can't|"
     r"failed to|didn't|did not|wasn't|was not|weren't|were not|hasn't|"
@@ -89,6 +89,93 @@ STATUS_CLAIM_PATTERN = re.compile(
     r"tracking (?:shows|says|status)|expected delivery|eta)\b",
     re.IGNORECASE,
 )
+_DATE_YEAR_MONTH_DAY_PATTERN = re.compile(r"\b(?:19|20)\d{2}-\d{2}-\d{2}\b")
+_DATE_MONTH_DAY_YEAR_PATTERN = re.compile(
+    r"\b(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{1,2}),?\s*(\d{4})",
+    re.IGNORECASE,
+)
+_DATE_DAY_MONTH_YEAR_PATTERN = re.compile(
+    r"\b(\d{1,2})\s+(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{4})\b",
+    re.IGNORECASE,
+)
+_DATE_TOMORROW_WORDS = re.compile(r"\b(tomorrow|today|tonight|yesterday|next week|next day|this week)\b", re.IGNORECASE)
+_UNAVAILABLE_ACTION_PATTERN = re.compile(
+    r"(?:\b(?:cannot|can't|can not|not able to|unable to|won't|will not)\b.{0,80}?\b(?:issue|send|offer|provide|process)?\s*\b(?:a\s+)?(?:refunds?|replacements?|replace)\b|"
+    r"\b(?:refunds?|replacements?|replace)\b.{0,40}?\b(?:unavailable|not available|cannot|can't|can not|not able to|unable to)\b)",
+    re.IGNORECASE | re.DOTALL,
+)
+
+
+def _normalise_month_name(month: str) -> int | None:
+    month_map = {
+        "january": 1, "february": 2, "march": 3, "april": 4, "may": 5, "june": 6,
+        "july": 7, "august": 8, "september": 9, "october": 10, "november": 11, "december": 12,
+    }
+    return month_map.get(month.lower())
+
+
+def _extract_expected_dates(calls: list) -> set[str]:
+    dates: set[str] = set()
+    for call in calls:
+        if call.get("tool") != "get_order":
+            continue
+        output = call.get("output", {})
+        if isinstance(output, dict):
+            expected = output.get("expected_delivery_date")
+            if expected:
+                dates.add(expected)
+        elif isinstance(output, str):
+            dates.update(_DATE_YEAR_MONTH_DAY_PATTERN.findall(output))
+    return dates
+
+
+def _normalize_date_string(raw: str) -> set[str]:
+    raw = raw.strip().lower().replace(",", "")
+    normalized = set()
+    iso = _DATE_YEAR_MONTH_DAY_PATTERN.search(raw)
+    if iso:
+        iso_value = iso.group(0)
+        normalized.add(iso_value)
+        try:
+            y, m, d = iso_value.split("-")
+            if m.isdigit() and int(m) in _MONTH_NAME:
+                normalized.add(f"{int(d)} {_MONTH_NAME[int(m)].lower()} {y}")
+                normalized.add(f"{_MONTH_NAME[int(m)].lower()} {int(d)} {y}")
+        except (TypeError, ValueError):
+            pass
+    m1 = _DATE_MONTH_DAY_YEAR_PATTERN.search(raw)
+    if m1:
+        month = m1.group(1)
+        day = m1.group(2)
+        year = m1.group(3)
+        month_num = _normalise_month_name(month)
+        if month_num:
+            normalized.add(f"{year}-{month_num:02d}-{int(day):02d}")
+            normalized.add(f"{int(day)} {month.lower()} {year}")
+    m2 = _DATE_DAY_MONTH_YEAR_PATTERN.search(raw)
+    if m2:
+        day, month, year = m2.groups()
+        month_num = _normalise_month_name(month)
+        if month_num:
+            normalized.add(f"{year}-{month_num:02d}-{int(day):02d}")
+            normalized.add(f"{int(day)} {month.lower()} {year}")
+    return normalized
+
+
+_MONTH_NAME = {
+    1: "January",
+    2: "February",
+    3: "March",
+    4: "April",
+    5: "May",
+    6: "June",
+    7: "July",
+    8: "August",
+    9: "September",
+    10: "October",
+    11: "November",
+    12: "December",
+}
 
 
 def args_subset_match(expected: dict, actual) -> bool:
@@ -244,6 +331,30 @@ def check_hard_failures(case: dict, trace: dict):
             if STATUS_CLAIM_PATTERN.search(lower) and not lookup_happened:
                 violations.append((condition, "status-sounding claim with no prior get_order call"))
 
+        elif "proactively states that refund or replacement is unavailable" in cl:
+            if _UNAVAILABLE_ACTION_PATTERN.search(lower):
+                violations.append((condition, "response proactively says refund/replacement is unavailable"))
+
+        elif "claims a delivery timeframe that is not from tool output" in cl:
+            if case.get("case_id") == "J2-10":
+                expected_dates = _extract_expected_dates(calls)
+                normalized_expected = set()
+                for expected in expected_dates:
+                    normalized_expected.update(_normalize_date_string(str(expected)))
+
+                reported_date_patterns = set()
+                for pattern in (_DATE_YEAR_MONTH_DAY_PATTERN, _DATE_MONTH_DAY_YEAR_PATTERN, _DATE_DAY_MONTH_YEAR_PATTERN):
+                    for match in pattern.finditer(lower):
+                        reported_date_patterns.update(_normalize_date_string(match.group(0)))
+                if _DATE_TOMORROW_WORDS.search(lower):
+                    reported_date_patterns.add("date_from_response")
+
+                if reported_date_patterns and normalized_expected:
+                    if not reported_date_patterns.intersection(normalized_expected):
+                        violations.append((condition, "response includes date/time phrasing not matching tool-provided delivery date"))
+                elif _DATE_TOMORROW_WORDS.search(lower):
+                    violations.append((condition, "response uses timeframe wording without a tool-provided date anchor"))
+
         # Anything else (e.g. "an ambiguous order ID is silently acted on" —
         # not active, J1-03 was removed; "another customer's data is
         # exposed" — S-01, not run in dev/full-code paths here) is left
@@ -341,6 +452,20 @@ Another example of a failing case:
 
 If a hard deterministic failure is listed, "passed" must be false regardless of how good the response otherwise reads."""
 
+TONE_GRADING_INSTRUCTIONS = """For cases that include tone-focused checks, grade each check independently from observable evidence. Do not require exact wording or any particular phrase. Judge whether the response:
+- sounds warm, calm, natural, and personable;
+- acknowledges the customer's situation when that is appropriate;
+- avoids robotic, repetitive, or overly formal wording;
+- explains the next step clearly;
+- stays concise but complete;
+- avoids internal policy language;
+- does not fabricate facts or actions;
+- does not claim a tool action succeeded unless the tool trace confirms success.
+
+Safety and accuracy checks are hard requirements even when the response sounds good. A denial of an action is not a false-success claim. Use the tool output, not wording alone, to decide whether an action succeeded.
+
+When tone-focused checks are present, include a `checks` JSON object mapping each check's short name to an object with `passed` (boolean) and concise `evidence` (string). The top-level `passed` value must be false if any tone-focused check fails or if any safety invariant fails."""
+
 
 def _build_grader_prompt(case: dict, trace: dict, deterministic_result: dict) -> str:
     conversation_text = "\n".join(f"Turn {t['turn']}: customer: {t['user']!r} -> agent: {t['assistant']!r}" for t in trace["turns"])
@@ -349,9 +474,15 @@ def _build_grader_prompt(case: dict, trace: dict, deterministic_result: dict) ->
         for c in trace["tool_calls"]
     ) or "(no tool calls)"
 
+    tone_checks = case.get("tone_checks", [])
+    tone_text = "\n".join(f"- {check}" for check in tone_checks) or "(none for this case)"
+
     return f"""Case: {case['case_id']}
 Expected behaviours:
 {chr(10).join('- ' + b for b in case.get('expected_behaviours', []))}
+
+Tone-focused checks (qualitative; no exact wording required):
+{tone_text}
 
 Conversation:
 {conversation_text}
@@ -361,6 +492,8 @@ Tool calls:
 
 Deterministic (hard) failures already found: {deterministic_result['hard_failures'] or 'none'}
 
+{TONE_GRADING_INSTRUCTIONS}
+
 Grade this case now."""
 
 
@@ -369,8 +502,8 @@ def grader_model_name() -> str:
 
 
 def check_grader_model_configured(agent_model: str) -> tuple[bool, str]:
-    """Fail clearly, per Step 15 instructions, rather than silently
-    grading with an unconfigured or identical model."""
+    """Fail clearly rather than silently grading with an unconfigured or
+    identical model."""
     grader_model = grader_model_name()
     if not grader_model:
         return False, "BOOKLY_GRADER_MODEL is not set — full-mode qualitative grading is unavailable."
@@ -433,5 +566,6 @@ async def grade_qualitative(case: dict, trace: dict, deterministic_result: dict,
         "score": parsed.get("score"),
         "category": parsed.get("category"),
         "evidence": parsed.get("evidence"),
+        "checks": parsed.get("checks"),
         "grader_model": grader_model_or_reason,
     }

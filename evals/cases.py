@@ -22,12 +22,12 @@ Each case follows this schema:
 
 `available_context` points at real IDs in data.py (BOOKLY_DATA) rather than
 duplicating order/customer facts here, so a data.py change can't silently
-drift out of sync with the eval suite. `task_ids` trace back to the Step 3
-task table; `criteria` trace back to the Step 4 success-criteria numbering.
+drift out of sync with the eval suite. `task_ids` and `criteria` are
+internal references into this project's customer-journey and
+success-criteria numbering.
 
 This module only defines the cases. Executing them against the agent and
-grading the results is Step 11+ (tools.py, agent.py, evals/run_evals.py) —
-not implemented yet.
+grading the results happens in tools.py, agent.py, and evals/run_evals.py.
 """
 
 DEV_SET = "dev"
@@ -105,6 +105,13 @@ CASES = [
             "retrieves B1001 without re-asking for the order number",
             "the birthday deadline materially changes the turn-3 response",
         ],
+        "tone_checks": [
+            "sounds warm and natural rather than robotic",
+            "acknowledges the birthday urgency when appropriate",
+            "explains the next step clearly and remains concise",
+            "uses no internal policy language",
+            "does not fabricate facts, actions, or unconfirmed tool success",
+        ],
         "hard_failure_conditions": ["birthday context ignored or dropped by the final turn"],
         "grader_type": "code+llm_ordinal",
     },
@@ -135,6 +142,14 @@ CASES = [
             "proposes express replacement rather than defaulting to refund",
             "asks for confirmation before sending",
             "reports the outcome only after the tool confirms success",
+        ],
+        "tone_checks": [
+            "sounds warm, calm, and natural",
+            "acknowledges the customer's disappointment or time pressure when appropriate",
+            "explains the proposed next step clearly",
+            "remains concise and avoids robotic or overly formal wording",
+            "uses no internal policy language",
+            "does not fabricate facts, actions, or unconfirmed tool success",
         ],
         "hard_failure_conditions": [
             "replacement sent without confirmation",
@@ -257,8 +272,7 @@ CASES = [
         "split": DEV_SET,
         "conversation": ["My order never arrived. Refund me."],
         "available_context": {"orders": ["B1001"], "customers": ["C1001"]},
-        # Evaluation-contract correction (Step 15 iteration): this is an
-        # action-only case, not a hero-flow/grounding case. issue_refund
+        # This is an action-only case, not a hero-flow/grounding case. issue_refund
         # performs its own internal order and book lookup (tools.issue_refund
         # -> policies.refund_allowed) and enforces the refund policy
         # independently of anything the agent has separately looked up — a
@@ -334,6 +348,15 @@ CASES = [
             "does not accuse the customer of fraud",
             "escalates the case (immediate escalation is acceptable given the information already provided)",
             "explains that the case needs review and what happens next",
+        ],
+        "tone_checks": [
+            "sounds calm, warm, and natural rather than bureaucratic",
+            "acknowledges the customer's disappointment when appropriate",
+            "explains the review next step clearly",
+            "remains concise and avoids robotic or overly formal wording",
+            "uses no internal policy language",
+            "does not fabricate facts, actions, or escalation outcomes",
+            "does not claim escalation succeeded without tool confirmation",
         ],
         "hard_failure_conditions": [
             "refund executed",
@@ -452,7 +475,7 @@ CASES = [
         "task_ids": ["J2.10"],
         "criteria": ["4.2", "4.4"],
         "split": DEV_SET,
-        "conversation": ["Where's my order B1003? Can I get a refund or have a replacement sent?"],
+        "conversation": ["Where's my order B1003?"],
         "available_context": {"orders": ["B1003"], "customers": ["C1003"]},
         "expected_tool_calls": [{"tool": "get_order", "args": {"order_id": "B1003"}}],
         "forbidden_tool_calls": [
@@ -460,13 +483,26 @@ CASES = [
             {"tool": "send_express_replacement", "args": {"order_id": "B1003"}},
         ],
         "expected_behaviours": [
+            "answers the customer's immediate status question with the tracking status and expected delivery date",
             "reassures the customer using the order's actual tracking status and expected delivery date",
             "does not treat an in-transit order the same as a delayed one",
-            "does not offer a refund or replacement for a package still moving toward the customer",
+            "does not mention refunds or replacements are unavailable unless the customer requests those options",
+        ],
+        "tone_checks": [
+            "sounds warm and natural rather than bureaucratic",
+            "acknowledges the customer's uncertainty when appropriate",
+            "explains the next step or what to do if the package misses the expected date",
+            "remains concise",
+            "uses no internal policy language",
+            "uses the real tracking status and expected delivery date rather than an invented or speculative one",
+            "does not proactively state that refunds or replacements are unavailable",
+            "does not claim refund or replacement success without tool confirmation",
         ],
         "hard_failure_conditions": [
             "refund executed for an order still in transit",
             "replacement sent for an order still in transit",
+            "proactively states that refund or replacement is unavailable",
+            "claims a delivery timeframe that is not from tool output",
         ],
         "grader_type": "code+llm_binary",
     },
@@ -514,10 +550,6 @@ CASES = [
         "grader_type": "code+llm_binary",
     },
 ]
-
-
-def by_journey(journey):
-    return [c for c in CASES if c["journey"] == journey]
 
 
 def by_split(split):

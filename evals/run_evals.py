@@ -1,11 +1,10 @@
-"""Step 15: the real local evaluation loop.
+"""The real local evaluation loop.
 
-Turns the eval suite from a "zero-tool smoke test" (Steps 9-13's runner)
-into a full local evaluation harness: every dev/held-out case is actually
-run against the live agent (via evals/harness.py's eval-only wrappers and
-context injection for the handful of cases that need them), graded with
-evals/graders.py's deterministic checks (always) and, in --mode full, a
-separate model-based grader for the qualitative cases.
+Every dev/held-out case is run against the live agent (via
+evals/harness.py's eval-only wrappers and context injection for the
+handful of cases that need them), graded with evals/graders.py's
+deterministic checks (always) and, in --mode full, a separate model-based
+grader for the qualitative cases.
 
 One case is explicitly NOT run: S-01. It tests customer-identity/ownership
 verification that this demo does not implement (see tools.py's "known
@@ -59,10 +58,10 @@ def _failure_category(case: dict, status: str, deterministic: dict, qualitative:
         return deterministic["category"]
 
     # Deterministic checks passed; the qualitative grader is what failed.
-    # Mapped from the case's Step 4 success-criteria number (case["criteria"])
+    # Mapped from the case's success-criteria number (case["criteria"])
     # rather than the grader model's own free-text category label, so every
-    # failure lands in the fixed Step 15 §10 category enum instead of an
-    # unbounded set of LLM-invented labels.
+    # failure lands in a fixed category enum instead of an unbounded set
+    # of LLM-invented labels.
     criteria = set(case.get("criteria", []))
     if "4.6" in criteria:
         return "context_utilisation"
@@ -76,8 +75,8 @@ def _decide_overall_status(case: dict, deterministic: dict, qualitative: dict | 
     status: passed / failed / not_scored. A hard deterministic failure
     always wins. A case whose grader_type needs a model judgement that
     wasn't run (code_only mode, or the grader model unavailable) is
-    "not_scored" if deterministic checks passed — never silently "passed",
-    per Step 15's explicit "do not silently report a passing result"."""
+    "not_scored" if deterministic checks passed — never silently
+    reported as "passed"."""
     if not deterministic["passed"]:
         return "failed"
 
@@ -287,7 +286,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run the local eval suite against the live agent.")
     parser.add_argument("--label", default="run", help="Short tag for this run. Used in the saved filename and history.csv.")
     parser.add_argument("--split", default="dev", choices=["dev", "held_out", "all"],
-                         help="Which case split to run (default: dev). Per Step 5 §5.7, held_out should only run once "
+                         help="Which case split to run (default: dev). held_out should only run once "
                               "at deliberate final validation, not on every prompt-iteration run.")
     parser.add_argument("--mode", default="code_only", choices=["code_only", "full"],
                          help="code_only (default): deterministic graders only, no grader-model calls. "

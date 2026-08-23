@@ -1,4 +1,4 @@
-"""Deterministic business rules (the "Code" bucket from Step 6).
+"""Deterministic business rules — the independently-enforced boundaries.
 
 These are plain Python functions, unit-testable without running an agent
 or a tool call. tools.py calls them before simulating any refund or
@@ -17,11 +17,9 @@ from data import BOOKLY_DATA
 _POLICIES = BOOKLY_DATA["policies"]
 
 # NOTE: BOOKLY_DATA["policies"] also defines "human_approval_limit" (250.0).
-# It is intentionally not referenced anywhere below. Nothing in the Step 3
-# task table, the Step 5 eval suite, or Step 10's operational-policy prompt
-# defines a distinct behavior for a $50-$250 middle tier — every stated
-# rule and every boundary eval case (J2-04 at $50, J2-05 at $51) tests a
-# single two-tier line: autonomous_refund_limit, plus an unconditional
+# It is intentionally not referenced anywhere below. Every stated rule and
+# every boundary eval case (J2-04 at $50, J2-05 at $51) tests a single
+# two-tier line: autonomous_refund_limit, plus an unconditional
 # collector-edition override. This demo enforces exactly that two-tier
 # rule. If a $50-$250 "additional review" tier becomes real, decide its
 # behavior and add eval cases for it first, then wire it in here.

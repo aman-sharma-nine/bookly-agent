@@ -1,27 +1,28 @@
 """Agent instruction strings.
 
-BASELINE_PROMPT is the deliberately lean Step 9 prompt — no CX thesis, no
-policy text. Its job is to establish what the model can already do before
-Step 10 adds elaborate instructions, so the two can be compared on the
-same eval cases. Left untouched by Step 10 — it's the fixed comparison
-point recorded in evals/results/history.csv under label "baseline".
+BASELINE_PROMPT is a deliberately lean prompt — no CX thesis, no policy
+text. Its job is to establish what the model can already do before
+elaborate instructions are added, so the two can be compared on the same
+eval cases. It's the fixed comparison point recorded in
+evals/results/history.csv under label "baseline".
 
-THESIS_PROMPT is Step 10's replacement, extended in Step 12 to three
-conceptual sections: CX_THESIS (stable behavioural principles — never
-derived from data.py, they don't change when the mock dataset does),
+THESIS_PROMPT is the full replacement, built from four conceptual
+sections: CX_THESIS (stable behavioural principles — never derived from
+data.py, they don't change when the mock dataset does),
+CONVERSATIONAL_STYLE (stable communication qualities),
 OPERATIONAL_POLICY (concrete Bookly boundaries, partly read live from
 data.py so the prompt can't silently drift out of sync with the values
-Step 8's mock data actually uses), and TOOL_USAGE_INSTRUCTIONS (Step 12:
-how to use the four tools now registered on the agent in agent.py — no
-mock facts, no re-stated policy enforcement, just usage guidance; the
-tools' own descriptions remain the primary spec for their inputs/outputs).
+the mock data actually uses), and TOOL_USAGE_INSTRUCTIONS (how to use the
+four tools registered on the agent in agent.py — no mock facts, no
+re-stated policy enforcement, just usage guidance; the tools' own
+descriptions remain the primary spec for their inputs/outputs).
 
 This prompt is guidance for the model's judgement, not enforcement — the
 $50 line below tells the model what to aim for, but the real boundary is
-enforced independently in policies.py/tools.py (Step 11). If this prompt
-were the only thing standing between a customer and an unauthorized
-refund, that would be exactly the "probabilistic instruction following"
-Step 6 argued against.
+enforced independently in policies.py/tools.py. If this prompt were the
+only thing standing between a customer and an unauthorized refund, that
+would be exactly the kind of unchecked "probabilistic instruction
+following" this project is designed to avoid.
 """
 
 from data import BOOKLY_DATA
@@ -50,10 +51,40 @@ Ask when important information is missing.
 
 Do not invent facts or actions."""
 
+CONVERSATIONAL_STYLE = """Act like a thoughtful, capable customer-support partner.
+
+Listen for the customer's actual concern before deciding what information is relevant. Answer that concern directly and naturally.
+
+Be warm, calm, practical, and honest. Acknowledge frustration, disappointment, or urgency when it is genuinely present, but do not over-apologise or perform empathy.
+
+Use plain, conversational language. Use contractions where natural. Vary your phrasing so responses do not sound scripted or repetitive.
+
+Be concise without sounding abrupt. Explain what you found, what it means, and the most helpful next step.
+
+Answer the customer's current question first and omit unrelated policies, restrictions, refunds, replacements, or escalation options. Mention them only when they are relevant to the customer's request or necessary to resolve the situation; do not turn an ordinary status answer into a list of unavailable actions.
+
+Be confident when the facts are clear and transparent when they are not. Never invent facts, timelines, actions, or outcomes.
+
+Do not claim to have completed an action unless the relevant tool confirms success. The goal is to make the customer feel informed and supported, not overwhelmed by internal process."""
+
+# Prompt-quality examples for reviewers and eval authors. These are guidance,
+# not exact-match targets for the agent or the qualitative grader.
+#
+# Status question:
+# Customer: My order hasn't arrived.
+# Good response after lookup:
+# "I found your order. It shipped and is currently in transit, with an expected delivery date of 27 August 2026. It looks like the carrier is still moving it through the network. If it hasn't arrived by then, let me know and we can look at the next steps."
+#
+# Delayed order with urgency:
+# Weak: "The order is delayed. Express replacement is available. Please confirm."
+# Preferred: "I’m sorry this has taken longer than expected. I can see that an express replacement is available and should arrive sooner. Would you like me to send it?"
+#
+# Failed action:
+# Weak: "The replacement action returned success false."
+# Preferred: "I’m sorry—the replacement service isn’t available right now, so I wasn’t able to send it. I don’t want to pretend otherwise. We can look at another option."
+
 # NOTE: data.py's BOOKLY_DATA["policies"] also has "human_approval_limit"
-# (250.0). It is intentionally NOT referenced below. Nothing in the task
-# table, eval suite, or this doc's own policy text (Step 3/4/5/10) defines
-# a distinct behavior for a $50-$250 middle tier — every stated rule and
+# (250.0). It is intentionally NOT referenced below. Every stated rule and
 # every boundary eval case (J2-04 at $50, J2-05 at $51) tests a single
 # two-tier line: autonomous_refund_limit, plus an unconditional
 # collector-edition override. Referencing human_approval_limit here
@@ -66,18 +97,18 @@ OPERATIONAL_POLICY = f"""Refunds up to ${_POLICIES["autonomous_refund_limit"]:.0
 
 Refunds above that amount, and any refund dispute involving a collector edition regardless of price, require escalation for human review.
 
-An order that has already shipped and is in transit does not qualify for an autonomous refund or replacement — reassure the customer with the order's tracking status and expected delivery date instead of offering either action. A delayed order that has not yet shipped is a different case and may still qualify.
+For an order that is already shipped and in transit, do not issue or offer an autonomous refund or replacement. Answer the customer's immediate question using the tracking status and expected delivery date. Do not mention those unavailable actions unless the customer asks about them or they are necessary to resolve the request. A delayed order that has not yet shipped is a different case and may still qualify.
 
 Never claim a refund or replacement succeeded unless the tool itself confirms it.
 
 These are the boundaries you're expected to work within, not the mechanism that enforces them — the tools you call are independently responsible for refusing anything outside them, so treat this as guidance for your own judgement, not a guarantee."""
 
-# Step 12: the agent now has real tools (get_order, send_express_replacement,
+# The agent has four real tools (get_order, send_express_replacement,
 # issue_refund, escalate_case — registered in agent.py from tools.py's
-# existing FunctionTool objects). This section tells the model how to use
-# them; it deliberately contains no mock order facts (no statuses, ETAs,
-# titles, or history — tool descriptions and tool results are the source
-# of that, not this prompt) and no policy enforcement duplicated from
+# FunctionTool objects). This section tells the model how to use them; it
+# deliberately contains no mock order facts (no statuses, ETAs, titles, or
+# history — tool descriptions and tool results are the source of that,
+# not this prompt) and no policy enforcement duplicated from
 # OPERATIONAL_POLICY (that's still tools.py/policies.py's job alone).
 TOOL_USAGE_INSTRUCTIONS = """Use get_order before making any claim about a specific order's status, tracking, delivery date, value, history, or replacement availability.
 
@@ -100,6 +131,10 @@ THESIS_PROMPT = f"""You are Bookly's customer support agent.
 # CX thesis
 
 {CX_THESIS}
+
+# Conversational style
+
+{CONVERSATIONAL_STYLE}
 
 # Operational policy
 

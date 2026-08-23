@@ -52,7 +52,7 @@ class RefundAllowedTests(unittest.TestCase):
         self.assertEqual(refund_allowed(None, None), (False, "invalid_record"))
         self.assertEqual(refund_allowed({"unit_price": 10}, {"is_collector_edition": False}), (False, "invalid_record"))
 
-    # --- Step 14: precise cent-level boundary coverage, via copied records
+    # --- Precise cent-level boundary coverage, via copied records
     # rather than mutating BOOKLY_DATA (B1021/B1022 above already cover the
     # $50/$51 whole-dollar case using real dataset records; these isolate
     # the exact <=/> boundary independent of which real order happens to

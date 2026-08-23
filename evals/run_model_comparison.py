@@ -1,4 +1,4 @@
-"""Step 16: controlled model/reasoning comparison.
+"""Controlled model/reasoning comparison.
 
 Does NOT modify agent.py, prompts.py, tools.py, policies.py,
 evals/cases.py, or evals/graders.py. Every comparison agent is a fresh
@@ -17,11 +17,11 @@ Reasoning effort is set via agents.ModelSettings(reasoning=openai.types.shared.R
 confirmed against the installed SDK (Reasoning.effort accepts
 'none'|'minimal'|'low'|'medium'|'high'|'xhigh'|'max').
 
-Runs the same 16-case dev split used by Step 15's finalized baseline
+Runs the same 16-case dev split used by the finalized baseline
 (evals.cases.by_split("dev")), the same grader model (BOOKLY_GRADER_MODEL),
 the same evaluation-context-injection and tool-override logic
 (evals.harness — untouched), and mode="full" (deterministic + qualitative
-grading) every time, so results are comparable to Step 15's numbers.
+grading) every time, so results stay comparable across runs.
 Held-out cases are never touched by this script.
 
 Usage (one (configuration, repeat) pair per invocation, so each run stays
@@ -48,7 +48,7 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 
-from agents import ModelSettings, Runner
+from agents import ModelSettings
 from agents.exceptions import ModelBehaviorError
 from openai.types.shared import Reasoning
 
@@ -192,11 +192,11 @@ async def main(config_key: str, repeat: int) -> None:
 
     ok, grader_model_or_reason = graders.check_grader_model_configured(model)
     if not ok:
-        raise SystemExit(f"Cannot run Step 16 comparison: {grader_model_or_reason}")
+        raise SystemExit(f"Cannot run model comparison: {grader_model_or_reason}")
     grader_model = grader_model_or_reason
 
     label = f"step16-{config_key}-run{repeat}"
-    print(f"=== Step 16 comparison [{label}] — model={model} reasoning={config['reasoning']} — "
+    print(f"=== Model comparison [{label}] — model={model} reasoning={config['reasoning']} — "
           f"{len(DEV_CASES)} dev cases — grader={grader_model} ===\n")
 
     results = []
@@ -281,7 +281,7 @@ async def main(config_key: str, repeat: int) -> None:
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Step 16 model/reasoning comparison — one (config, repeat) per invocation.")
+    parser = argparse.ArgumentParser(description="Model/reasoning comparison — one (config, repeat) per invocation.")
     parser.add_argument("--config", required=True, choices=list(CONFIGURATIONS.keys()))
     parser.add_argument("--repeat", type=int, required=True, help="Repeat number (1, 2, 3, ...) — used only in the label.")
     args = parser.parse_args()

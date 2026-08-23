@@ -1,4 +1,4 @@
-"""Offline tests for the Step 15 evaluation harness (evals/graders.py,
+"""Offline tests for the evaluation harness (evals/graders.py,
 evals/harness.py, evals/run_evals.py). No OpenAI API call anywhere in this
 file — tool-call traces are constructed by hand or with lightweight fake
 objects standing in for the Agents SDK's ToolCallItem/ToolCallOutputItem.
@@ -185,8 +185,8 @@ class HardFailurePolicyTests(unittest.TestCase):
         violations = graders.check_hard_failures(case, trace)
         self.assertEqual(violations, [])
 
-    # Regression tests: real gpt-5.6 transcripts from the Step 16 model
-    # comparison that were false-positive-flagged before the grader fix
+    # Regression tests: real gpt-5.6 transcripts from a model
+    # comparison run that were false-positive-flagged before the grader fix
     # (markdown-wrapped negation, e.g. "**not**", broke the old
     # before-only lookback; "No refund was issued" put the negation cue
     # further back than the old fixed window allowed; bare "refund" — a
@@ -232,7 +232,7 @@ class HardFailurePolicyTests(unittest.TestCase):
 
     # 9. A failed refund does not count as successful refund.
     def test_failed_refund_with_future_conditional_promise_is_not_flagged(self):
-        # Real false positive found during the Step 15 baseline run (J2-07):
+        # Real false positive found during a baseline eval run (J2-07):
         # "I will monitor and ensure your refund is issued as soon as our
         # service is restored" is a promise, not a claim it already happened.
         case = {"case_id": "J2-07", "hard_failure_conditions": ["final message claims refund success"]}

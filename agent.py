@@ -1,5 +1,4 @@
 from dotenv import load_dotenv
-import os
 from agents import Agent, ModelSettings, Runner, SQLiteSession
 import asyncio
 from openai.types.shared import Reasoning
@@ -60,12 +59,7 @@ async def run_turn(message: str, session: SQLiteSession):
     """Run one conversational turn, letting the SDK session supply history.
 
     Only the new user message is sent — the session (not a manually
-    rebuilt history list) is what gives the model the prior turns. This
-    is deliberately different from evals/run_evals.py's earlier
-    zero-tool-case runner, which manually threaded `result.to_input_list()`
-    between calls; that approach still works for a single tool-less
-    conversation, but Step 13 is specifically about proving the SDK's own
-    session mechanism does this instead.
+    rebuilt history list) is what gives the model the prior turns.
     """
     return await Runner.run(
         agent,

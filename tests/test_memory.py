@@ -1,11 +1,10 @@
-"""Offline tests for Step 13's session plumbing (agents.SQLiteSession).
+"""Offline tests for the session plumbing (agents.SQLiteSession).
 
 These test the deterministic session storage mechanism itself — item
 persistence, isolation between sessions — not model memory behaviour.
 No OpenAI API call happens anywhere in this file. Live three-turn memory
 behaviour (does the model actually use what the session hands it) is a
-separate manual smoke test, not an offline unit test, per Step 13's
-instructions.
+separate manual smoke test, not an offline unit test.
 """
 
 import unittest

@@ -5,7 +5,7 @@ instructions) but makes no network call and needs no OPENAI_API_KEY —
 Agent() is just configuration. These tests inspect that configuration
 only. They never call Runner.run() and never touch the network; live
 behaviour is covered separately by manual smoke checks (see agent.py's
-module docstring / the Step 12 report), not by this file.
+module docstring), not by this file.
 """
 
 import hashlib
@@ -15,7 +15,7 @@ from agent import agent
 from prompts import BASELINE_PROMPT, THESIS_PROMPT
 
 # Recorded the first time evals/run_evals.py ran against the untouched
-# Step 9 BASELINE_PROMPT (evals/results/history.csv, label "baseline",
+# BASELINE_PROMPT (evals/results/history.csv, label "baseline",
 # prompt_hash column — same hashlib.sha256(...).hexdigest()[:12] scheme
 # as run_evals.py's own prompt_fingerprint()). Using the value the repo
 # already recorded rather than re-hardcoding the full prompt string here.
