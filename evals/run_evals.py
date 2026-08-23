@@ -49,7 +49,7 @@ def prompt_fingerprint() -> dict:
 
 
 def _failure_category(case: dict, status: str, deterministic: dict, qualitative: dict | None) -> str | None:
-    """One primary category (Implementation plan.md Step 15 §10) for any
+    """One primary category for any
     failed case — including a case that only failed on the model-based
     qualitative grader, which grade_deterministic's own category (scoped
     to deterministic checks only) doesn't cover on its own."""

@@ -7,8 +7,8 @@ Two kinds of graders live here:
   evals/harness.py's run_conversation). No API call, no randomness.
 - A model-based grader (grade_qualitative, mode="full" only): for cases
   whose grader_type includes an "llm" component (judgement, ordinal
-  context-utilization, Likert tone, binary neutrality/completeness checks
-  — see Implementation plan.md Step 4/5), a *separate* model scores the
+  context-utilization, Likert tone, binary neutrality/completeness checks),
+  a *separate* model scores the
   final response and trace against the case's expected_behaviours. See
   "grader model must differ from the agent's model" below — this is
   enforced in code, not just documented.
@@ -255,8 +255,7 @@ def check_hard_failures(case: dict, trace: dict):
 def categorize_failure(case: dict, sequence_ok: bool, missing_calls: list,
                         count_failures: list, forbidden_violations: list,
                         hard_failures: list) -> str:
-    """One primary category per Implementation plan.md Step 15 §10, chosen
-    by priority: a hard failure always wins (it's the worst class of bug),
+    """One primary category, chosen by priority: a hard failure always wins (it's the worst class of bug),
     then policy-shaped forbidden violations, then ordering/count/argument
     problems, in that order."""
     if hard_failures:

@@ -2,20 +2,18 @@
 
 Multi-order ambiguity (a customer citing two candidate order IDs) is
 deliberately out of scope for this demo — the case that used to test it
-(J1-03) was removed. See "Deferred evaluation: multiple-order ambiguity"
-in Implementation plan.md, Step 5, for the future cases this becomes when
-multi-order support is in scope. J1-01 still covers the in-scope half of
-J1.2/J1.3 (missing order number, not ambiguous order number).
+(J1-03) was removed, deferred until multi-order support is in scope.
+J1-01 still covers the in-scope half of J1.2/J1.3 (missing order number,
+not ambiguous order number).
 
 Conflicting delivery evidence (tracking says delivered, customer says it
 never arrived) is likewise deliberately out of scope — B1002 was
 simplified from "delivered" to "delayed" so J2-02's collector-edition
 scenario is no longer self-contradictory, and the case that specifically
 tested the conflict (J2-06) was removed rather than left to quietly test
-data that no longer exists. See "Deferred evaluation: conflicting
-delivery evidence" in Implementation plan.md, Step 5.
+data that no longer exists.
 
-Each case follows the schema defined in the implementation plan:
+Each case follows this schema:
 
     case_id, journey, task_ids, criteria,
     conversation, available_context,
@@ -303,9 +301,8 @@ CASES = [
         # simple, non-contradictory scenario: a delayed, collector-edition,
         # $250 order. The refund is blocked on collector-edition-requires-
         # review alone, no conflicting delivery evidence involved (that
-        # scenario is deferred — see "Deferred evaluation: conflicting
-        # delivery evidence" in Implementation plan.md; J2-06, which tested
-        # it, has been removed from the active suite for the same reason).
+        # scenario is deferred; J2-06, which tested it, has been removed
+        # from the active suite for the same reason).
         #
         # Single-turn, immediate escalation accepted (decision made
         # 2026-08-23, superseding the two-turn confirmation-gated version
