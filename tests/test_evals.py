@@ -390,12 +390,12 @@ class SplitAndBlockedCaseTests(unittest.TestCase):
 
     def test_dev_and_held_out_cover_all_cases(self):
         # J2-06 removed (B1002's simplification retired the conflicting-
-        # delivery-evidence scenario it tested — see Implementation
-        # plan.md's "Deferred evaluation: conflicting delivery evidence").
+        # delivery-evidence scenario it tested). J2-10 added (order still
+        # in transit must not trigger an autonomous refund or replacement).
         self.assertEqual(len(by_split("dev")) + len(by_split("held_out")), len(CASES))
-        self.assertEqual(len(by_split("dev")), 16)
+        self.assertEqual(len(by_split("dev")), 17)
         self.assertEqual(len(by_split("held_out")), 5)
-        self.assertEqual(len(CASES), 21)
+        self.assertEqual(len(CASES), 22)
 
     # 15. Blocked cases are not counted as passing.
     def test_s01_is_registered_as_blocked_not_run(self):

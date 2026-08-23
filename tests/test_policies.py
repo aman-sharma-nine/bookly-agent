@@ -88,6 +88,30 @@ class RefundAllowedTests(unittest.TestCase):
         self.assertFalse(allowed)
         self.assertEqual(reason, "exceeds_autonomous_refund_limit")
 
+    def test_b1003_in_transit_rejected_even_within_limit(self):
+        # Regression test: B1003 is $32 (within autonomous_refund_limit)
+        # and not a collector edition, but fulfillment_status="shipped"/
+        # tracking_status="in_transit" — the package is already moving
+        # toward the customer, so a refund must still be denied.
+        order, book = order_and_book("B1003")
+        self.assertEqual(order["fulfillment_status"], "shipped")
+        self.assertEqual(order["tracking_status"], "in_transit")
+        self.assertLessEqual(order["unit_price"] * order["quantity"], BOOKLY_DATA["policies"]["autonomous_refund_limit"])
+
+        allowed, reason = refund_allowed(order, book)
+
+        self.assertFalse(allowed)
+        self.assertEqual(reason, "order_in_transit")
+
+    def test_delayed_order_not_treated_as_in_transit(self):
+        # B1001 is "delayed"/"carrier_delay" — stuck before ever shipping,
+        # not moving toward the customer — so it must NOT be caught by the
+        # in-transit check.
+        order, book = order_and_book("B1001")
+        allowed, reason = refund_allowed(order, book)
+        self.assertTrue(allowed)
+        self.assertNotEqual(reason, "order_in_transit")
+
     def test_collector_edition_below_limit_still_requires_review(self):
         # Precedence check: a $25 collector edition must be blocked for
         # being a collector edition, not slip through because it's under
@@ -126,6 +150,20 @@ class ReplacementAllowedTests(unittest.TestCase):
         allowed, reason = replacement_allowed(override_order, book)
         self.assertFalse(allowed)
         self.assertEqual(reason, "collector_edition_requires_review")
+
+    def test_b1003_in_transit_rejected_even_if_available(self):
+        # Regression test: force express_replacement_available/eta True on
+        # B1003's actual shipped/in_transit state — the in-transit check
+        # must still block it, since express_replacement_available alone
+        # doesn't mean a duplicate shipment is appropriate for a package
+        # already moving toward the customer.
+        order, book = order_and_book("B1003")
+        override_order = dict(order, express_replacement_available=True, express_replacement_eta="2026-08-23")
+
+        allowed, reason = replacement_allowed(override_order, book)
+
+        self.assertFalse(allowed)
+        self.assertEqual(reason, "order_in_transit")
 
     def test_price_never_gates_replacement(self):
         # $250 collector edition would fail on price if this function ever

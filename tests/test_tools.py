@@ -88,6 +88,15 @@ class IssueRefundTests(ToolTestCase):
         self.assertFalse(result["success"])
         self.assertEqual(result["reason"], "already_refunded")
 
+    def test_b1003_in_transit_fails_even_within_limit(self):
+        # Regression test: B1003 is $32 (within the autonomous limit) and
+        # not a collector edition, but it's already shipped and in transit
+        # — a refund must be denied rather than issued autonomously.
+        result = tools.issue_refund("B1003", "customer reports order is delayed")
+        self.assertFalse(result["success"])
+        self.assertEqual(result["reason"], "order_in_transit")
+        self.assertEqual(result["status"], "rejected")
+
     def test_empty_reason_fails(self):
         result = tools.issue_refund("B1001", "   ")
         self.assertFalse(result["success"])
@@ -165,6 +174,15 @@ class SendExpressReplacementTests(ToolTestCase):
         result = tools.send_express_replacement("B1002")
         self.assertFalse(result["success"])
         self.assertEqual(result["reason"], "collector_edition_requires_review")
+
+    def test_b1003_in_transit_fails(self):
+        # B1003 is already "shipped"/"in_transit" (express_replacement_
+        # available is also False for it, but the in-transit check is
+        # meant to gate this independently — see policies.py).
+        result = tools.send_express_replacement("B1003")
+        self.assertFalse(result["success"])
+        self.assertEqual(result["reason"], "order_in_transit")
+        self.assertNotIn("eta", result)
 
     def test_unknown_order_fails_without_exception(self):
         result = tools.send_express_replacement("B9999")

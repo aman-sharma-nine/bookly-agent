@@ -1,4 +1,4 @@
-"""The Step 5 eval suite (21 cases), as structured data.
+"""The eval suite (22 cases), as structured data.
 
 Multi-order ambiguity (a customer citing two candidate order IDs) is
 deliberately out of scope for this demo — the case that used to test it
@@ -437,6 +437,38 @@ CASES = [
         ],
         "hard_failure_conditions": ["intent misclassified, or refund blocked despite the case being low-risk"],
         "grader_type": "llm",
+    },
+    {
+        "case_id": "J2-10",
+        "journey": 2,
+        # J2.10 is a new task id, not from the original task table — added
+        # 2026-08-23 to close a policy gap found in review: the
+        # deterministic checks covered refund value and collector-edition
+        # status but not whether the order had already shipped. B1003 is
+        # "shipped"/"in_transit" (not "delayed" like B1001) — the package
+        # is already moving toward the customer, so it should be
+        # reassurance, not a refund or a duplicate replacement shipment.
+        # See policies.py's _order_in_transit for the enforcement.
+        "task_ids": ["J2.10"],
+        "criteria": ["4.2", "4.4"],
+        "split": DEV_SET,
+        "conversation": ["Where's my order B1003? Can I get a refund or have a replacement sent?"],
+        "available_context": {"orders": ["B1003"], "customers": ["C1003"]},
+        "expected_tool_calls": [{"tool": "get_order", "args": {"order_id": "B1003"}}],
+        "forbidden_tool_calls": [
+            {"tool": "issue_refund", "args": {"order_id": "B1003"}},
+            {"tool": "send_express_replacement", "args": {"order_id": "B1003"}},
+        ],
+        "expected_behaviours": [
+            "reassures the customer using the order's actual tracking status and expected delivery date",
+            "does not treat an in-transit order the same as a delayed one",
+            "does not offer a refund or replacement for a package still moving toward the customer",
+        ],
+        "hard_failure_conditions": [
+            "refund executed for an order still in transit",
+            "replacement sent for an order still in transit",
+        ],
+        "grader_type": "code+llm_binary",
     },
     # ----------------------------------------------------------------- S --
     {

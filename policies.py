@@ -32,13 +32,15 @@ def refund_allowed(order: dict, book: dict) -> tuple[bool, str]:
 
     This does not perform the refund — it only answers whether tools.py's
     issue_refund is permitted to. Checked in this order: record validity,
-    whether the order was already refunded, the collector-edition
-    override, then the autonomous refund value limit.
+    whether the order was already refunded, whether the order is still
+    in transit, the collector-edition override, then the autonomous
+    refund value limit.
 
     Args:
         order: The order record from BOOKLY_DATA["orders"] (or an
             equivalent dict — must contain at least "unit_price",
-            "quantity", "refund_amount", and "book_id").
+            "quantity", "refund_amount", "book_id", "fulfillment_status",
+            and "tracking_status").
         book: The book record from BOOKLY_DATA["books"] for
             order["book_id"] (must contain at least
             "is_collector_edition").
@@ -53,6 +55,9 @@ def refund_allowed(order: dict, book: dict) -> tuple[bool, str]:
 
     if order.get("refund_amount", 0) > 0:
         return False, "already_refunded"
+
+    if _order_in_transit(order):
+        return False, "order_in_transit"
 
     if _POLICIES["collector_edition_requires_review"] and book["is_collector_edition"]:
         return False, "collector_edition_requires_review"
@@ -69,10 +74,18 @@ def replacement_allowed(order: dict, book: dict) -> tuple[bool, str]:
 
     Deliberately has no price check — express-replacement eligibility is
     not a refund-value question, so autonomous_refund_limit is never
-    reused here. Eligibility is driven entirely by the order's own
-    precomputed express_replacement_available/eta fields (this demo's
-    stand-in for a real logistics/inventory check) and the
-    collector-edition override.
+    reused here. Eligibility is driven by the order's own precomputed
+    express_replacement_available/eta fields (this demo's stand-in for a
+    real logistics/inventory check), the collector-edition override, and
+    whether the order is still in transit.
+
+    The in-transit check exists because express_replacement_available is
+    demo data describing whether a replacement *could* be dispatched, not
+    whether one *should* be — a package already shipped and moving toward
+    the customer should not trigger a costly duplicate shipment just
+    because that field happens to be true. A delayed order (fulfillment
+    still stuck before it ever shipped) is a different, still-eligible
+    case: see _order_in_transit.
 
     replacement_limit (BOOKLY_DATA["policies"]["replacement_limit"], currently
     1) is read here, not just assumed: if it's below 1, no autonomous
@@ -106,6 +119,9 @@ def replacement_allowed(order: dict, book: dict) -> tuple[bool, str]:
     if _POLICIES["replacement_limit"] < 1:
         return False, "replacement_limit_reached"
 
+    if _order_in_transit(order):
+        return False, "order_in_transit"
+
     if _POLICIES["collector_edition_requires_review"] and book["is_collector_edition"]:
         return False, "collector_edition_requires_review"
 
@@ -113,6 +129,17 @@ def replacement_allowed(order: dict, book: dict) -> tuple[bool, str]:
         return False, "express_replacement_unavailable"
 
     return True, "express_replacement_available"
+
+
+def _order_in_transit(order: dict) -> bool:
+    """True once an order has actually shipped and is moving toward the
+    customer — fulfillment_status "shipped" or tracking_status
+    "in_transit" (checked independently since either alone is enough
+    evidence the package is en route). A "delayed" order that never
+    shipped in the first place (e.g. B1001, still carrier_delay before
+    dispatch) does not count — that's the recoverable case an express
+    replacement or refund can still legitimately address."""
+    return order.get("fulfillment_status") == "shipped" or order.get("tracking_status") == "in_transit"
 
 
 def _looks_like_refund_order(order: dict) -> bool:
