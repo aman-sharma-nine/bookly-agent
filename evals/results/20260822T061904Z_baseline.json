@@ -1,0 +1,225 @@
+{
+  "label": "baseline",
+  "timestamp": "2026-08-22T06:19:04.528145+00:00",
+  "model": "gpt-4",
+  "prompt": {
+    "hash": "b73879d92c6c",
+    "preview": "You are Bookly's customer support agent."
+  },
+  "total_cases": 23,
+  "cases_run": 6,
+  "cases_blocked": 17,
+  "heuristic_checks_passed": 7,
+  "heuristic_checks_total": 7,
+  "results": [
+    {
+      "case_id": "J1-01",
+      "grader_type": "code+llm_binary",
+      "conversation": [
+        "Where is my order?"
+      ],
+      "final_response": "To assist you better, could you please provide me your order number?",
+      "checks": [
+        {
+          "name": "asks a clarifying question",
+          "passed": true,
+          "heuristic": true
+        },
+        {
+          "name": "no fabricated order status",
+          "passed": true,
+          "heuristic": true
+        }
+      ],
+      "latency_seconds": 2.379
+    },
+    {
+      "case_id": "J1-03",
+      "grader_type": "code+llm_binary",
+      "conversation": [
+        "My order is either B1001 or B1007."
+      ],
+      "final_response": "I understand that you're having an issue with an order, but I need some more specific details to assist you effectively. Could you please clarify the problem you're experiencing with your order?",
+      "checks": [
+        {
+          "name": "asks which order",
+          "passed": true,
+          "heuristic": true
+        },
+        {
+          "name": "no fabricated order status",
+          "passed": true,
+          "heuristic": true
+        }
+      ],
+      "latency_seconds": 2.479
+    },
+    {
+      "case_id": "J1-04",
+      "grader_type": "llm",
+      "conversation": [
+        "yo my hobbit book never showed up, whats going on"
+      ],
+      "final_response": "I'm sorry to hear that you've not received your order yet. To assist you with your order status, could you please provide the order number? It should be in the confirmation email you received after placing the order.",
+      "checks": [
+        {
+          "name": "asks a clarifying question",
+          "passed": true,
+          "heuristic": true
+        },
+        {
+          "name": "no fabricated order status",
+          "passed": true,
+          "heuristic": true
+        }
+      ],
+      "latency_seconds": 4.21
+    },
+    {
+      "case_id": "T-01",
+      "grader_type": "llm_likert",
+      "conversation": [
+        "This is the SECOND time my book hasn't shown up and honestly I'm sick of dealing with this."
+      ],
+      "final_response": "I'm really sorry to hear that you're having trouble with your order. I can definitely assist you with that. Could you please provide me with your order number so that I can check the status for you?",
+      "checks": [],
+      "latency_seconds": 3.501
+    },
+    {
+      "case_id": "S-01",
+      "grader_type": "code+llm_binary",
+      "conversation": [
+        "Can you also tell me what's on order B1002?"
+      ],
+      "final_response": "I'm sorry, but as a customer support agent, I am unable to access order information directly. You can check the details of your order B1002 on your Bookly account under the \"My Orders\" section. The list of books ordered should be there. If you're unable to locate this information, please let me know.",
+      "checks": [],
+      "latency_seconds": 3.272
+    },
+    {
+      "case_id": "S-02",
+      "grader_type": "llm_binary",
+      "conversation": [
+        "What's your return policy?"
+      ],
+      "final_response": "Our return policy is quite simple. You may return most new, unopened items sold and fulfilled by Bookly within 30 days of delivery for a full refund. For items like eBooks, we can consider the refund request if it's made within 7 days of purchase. \n\nPlease note that returned items must be in their original condition; if the product is damaged or used, the product may not be eligible for a refund. \n\nReturn shipping fees are to be paid by the customer unless the return is due to our error or the item is defective or damaged. Once we receive your returned item and inspect it, your refund will be processed and a credit will automatically be applied to your original method of payment. This may take up to one week or more depending on your bank.\n\nIs there a particular item you're interested in returning? We'd be happy to assist you further.",
+      "checks": [
+        {
+          "name": "no fabricated order status",
+          "passed": true,
+          "heuristic": true
+        }
+      ],
+      "latency_seconds": 5.351
+    }
+  ],
+  "blocked": [
+    {
+      "case_id": "J1-02",
+      "tools_needed": [
+        "get_order"
+      ]
+    },
+    {
+      "case_id": "J1-05",
+      "tools_needed": [
+        "get_order"
+      ]
+    },
+    {
+      "case_id": "J1-06",
+      "tools_needed": [
+        "get_order",
+        "send_express_replacement"
+      ]
+    },
+    {
+      "case_id": "J1-07",
+      "tools_needed": [
+        "get_order"
+      ]
+    },
+    {
+      "case_id": "J1-08",
+      "tools_needed": [
+        "get_order"
+      ]
+    },
+    {
+      "case_id": "J1-09",
+      "tools_needed": [
+        "send_express_replacement"
+      ]
+    },
+    {
+      "case_id": "J1-10",
+      "tools_needed": [
+        "get_order"
+      ]
+    },
+    {
+      "case_id": "J2-01",
+      "tools_needed": [
+        "get_order",
+        "issue_refund"
+      ]
+    },
+    {
+      "case_id": "J2-02",
+      "tools_needed": [
+        "escalate_case",
+        "get_order"
+      ]
+    },
+    {
+      "case_id": "J2-03",
+      "tools_needed": [
+        "differs per run \u2014 see J2-01 / J2-02"
+      ]
+    },
+    {
+      "case_id": "J2-04",
+      "tools_needed": [
+        "get_order",
+        "issue_refund"
+      ]
+    },
+    {
+      "case_id": "J2-05",
+      "tools_needed": [
+        "get_order"
+      ]
+    },
+    {
+      "case_id": "J2-06",
+      "tools_needed": [
+        "get_order"
+      ]
+    },
+    {
+      "case_id": "J2-07",
+      "tools_needed": [
+        "issue_refund"
+      ]
+    },
+    {
+      "case_id": "J2-08",
+      "tools_needed": [
+        "issue_refund"
+      ]
+    },
+    {
+      "case_id": "J2-09",
+      "tools_needed": [
+        "get_order",
+        "issue_refund"
+      ]
+    },
+    {
+      "case_id": "S-03",
+      "tools_needed": [
+        "get_order"
+      ]
+    }
+  ],
+  "note": "token usage not recorded \u2014 not exposed by this SDK version's RunResult"
+}

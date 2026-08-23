@@ -1,0 +1,1445 @@
+{
+  "label": "step16-gpt-5.6-medium-run2",
+  "step": 16,
+  "config_key": "gpt-5.6-medium",
+  "repeat": 2,
+  "timestamp": "2026-08-23T03:22:13.195764+00:00",
+  "model": "gpt-5.6",
+  "reasoning_effort": "medium",
+  "grader_model": "gpt-4o",
+  "split": "dev",
+  "mode": "full",
+  "case_count": 16,
+  "results": [
+    {
+      "case_id": "J1-01",
+      "grader_type": "code+llm_binary",
+      "status": "passed",
+      "category": null,
+      "latency_seconds": 2.856,
+      "hard_failures": [],
+      "qualitative": {
+        "status": "scored",
+        "passed": true,
+        "score": 5,
+        "category": "intent_recognition",
+        "evidence": "The agent recognized the delayed-order intent and asked only for the order number.",
+        "grader_model": "gpt-4o"
+      },
+      "trace": {
+        "case_id": "J1-01",
+        "context_message": null,
+        "turns": [
+          {
+            "turn": 0,
+            "user": "Where is my order?",
+            "assistant": "Please share your Bookly order ID (for example, **B1001**), and I\u2019ll check its status."
+          }
+        ],
+        "tool_calls": [],
+        "usage": {
+          "requests": 1,
+          "input_tokens": 1205,
+          "output_tokens": 42,
+          "total_tokens": 1247
+        }
+      },
+      "usage": {
+        "requests": 1,
+        "input_tokens": 1205,
+        "output_tokens": 42,
+        "total_tokens": 1247
+      }
+    },
+    {
+      "case_id": "J1-02",
+      "grader_type": "code",
+      "status": "passed",
+      "category": null,
+      "latency_seconds": 7.317,
+      "hard_failures": [],
+      "qualitative": null,
+      "trace": {
+        "case_id": "J1-02",
+        "context_message": null,
+        "turns": [
+          {
+            "turn": 0,
+            "user": "Where is B1001?",
+            "assistant": "Order **B1001** (*The Hobbit*) is delayed with the carrier and is currently expected by **August 26, 2026**.\n\nA free express replacement is available, expected by **August 23, 2026**. Would you like me to send it?"
+          }
+        ],
+        "tool_calls": [
+          {
+            "turn": 0,
+            "tool": "get_order",
+            "call_id": "call_1LjpbEqZeZCyNqNSBH8OFkv5",
+            "args": {
+              "order_id": "B1001"
+            },
+            "raw_arguments": "{\"order_id\":\"B1001\"}",
+            "malformed_arguments": false,
+            "output": {
+              "success": true,
+              "order_id": "B1001",
+              "reason": null,
+              "book_title": "The Hobbit",
+              "quantity": 1,
+              "total_value": 25.0,
+              "currency": "USD",
+              "fulfillment_status": "delayed",
+              "tracking_status": "carrier_delay",
+              "expected_delivery": "2026-08-26",
+              "delivered_date": null,
+              "is_collector_edition": false,
+              "previous_refund_count": 0,
+              "previous_missing_delivery_claims": 0,
+              "express_replacement_available": true,
+              "express_replacement_eta": "2026-08-23",
+              "issue_tags": [
+                "delayed",
+                "carrier_delay"
+              ]
+            },
+            "success": true,
+            "kind": "lookup"
+          }
+        ],
+        "usage": {
+          "requests": 2,
+          "input_tokens": 2590,
+          "output_tokens": 180,
+          "total_tokens": 2770
+        }
+      },
+      "usage": {
+        "requests": 2,
+        "input_tokens": 2590,
+        "output_tokens": 180,
+        "total_tokens": 2770
+      }
+    },
+    {
+      "case_id": "J1-05",
+      "grader_type": "code+llm_ordinal",
+      "status": "passed",
+      "category": null,
+      "latency_seconds": 12.209,
+      "hard_failures": [],
+      "qualitative": {
+        "status": "scored",
+        "passed": true,
+        "score": 4,
+        "category": "context_utilization",
+        "evidence": "The agent utilized the provided order number B1001 to retrieve details without re-asking for it and offered a solution considering the birthday deadline provided by the customer.",
+        "grader_model": "gpt-4o"
+      },
+      "trace": {
+        "case_id": "J1-05",
+        "context_message": null,
+        "turns": [
+          {
+            "turn": 0,
+            "user": "My book hasn't arrived.",
+            "assistant": "I\u2019m sorry it hasn\u2019t arrived. What\u2019s your Bookly order ID (for example, **B1001**)? I\u2019ll check the delivery status and available options."
+          },
+          {
+            "turn": 1,
+            "user": "B1001.",
+            "assistant": "I found order **B1001** for *The Hobbit*. It\u2019s delayed with the carrier and is currently expected by **August 26, 2026**.\n\nI can send a **free express replacement**, estimated to arrive by **August 23, 2026**. Would you like me to send it?"
+          },
+          {
+            "turn": 2,
+            "user": "It's my daughter's birthday tomorrow.",
+            "assistant": "I\u2019m sorry\u2014the available express replacement is estimated for **August 23**, so I can\u2019t promise a copy by tomorrow. I can either send that replacement free or issue a **$25 refund** so you can try to buy one locally. Which would help more?"
+          }
+        ],
+        "tool_calls": [
+          {
+            "turn": 1,
+            "tool": "get_order",
+            "call_id": "call_a9yg4mciiXx52PsKNlCSOWzi",
+            "args": {
+              "order_id": "B1001"
+            },
+            "raw_arguments": "{\"order_id\":\"B1001\"}",
+            "malformed_arguments": false,
+            "output": {
+              "success": true,
+              "order_id": "B1001",
+              "reason": null,
+              "book_title": "The Hobbit",
+              "quantity": 1,
+              "total_value": 25.0,
+              "currency": "USD",
+              "fulfillment_status": "delayed",
+              "tracking_status": "carrier_delay",
+              "expected_delivery": "2026-08-26",
+              "delivered_date": null,
+              "is_collector_edition": false,
+              "previous_refund_count": 0,
+              "previous_missing_delivery_claims": 0,
+              "express_replacement_available": true,
+              "express_replacement_eta": "2026-08-23",
+              "issue_tags": [
+                "delayed",
+                "carrier_delay"
+              ]
+            },
+            "success": true,
+            "kind": "lookup"
+          }
+        ],
+        "usage": {
+          "requests": 4,
+          "input_tokens": 5516,
+          "output_tokens": 365,
+          "total_tokens": 5881
+        }
+      },
+      "usage": {
+        "requests": 4,
+        "input_tokens": 5516,
+        "output_tokens": 365,
+        "total_tokens": 5881
+      }
+    },
+    {
+      "case_id": "J1-06",
+      "grader_type": "code+llm_binary+llm",
+      "status": "passed",
+      "category": null,
+      "latency_seconds": 12.152,
+      "hard_failures": [],
+      "qualitative": {
+        "status": "scored",
+        "passed": true,
+        "score": 4,
+        "category": "process_adherence",
+        "evidence": "The agent correctly identified the missed birthday delivery date, proposed an express replacement, asked for confirmation, and reported the outcome after successful tool confirmation.",
+        "grader_model": "gpt-4o"
+      },
+      "trace": {
+        "case_id": "J1-06",
+        "context_message": null,
+        "turns": [
+          {
+            "turn": 0,
+            "user": "My book hasn't arrived.",
+            "assistant": "I\u2019m sorry your book hasn\u2019t arrived. What\u2019s your Bookly order ID (for example, **B1001**)? I\u2019ll check its delivery status and available options."
+          },
+          {
+            "turn": 1,
+            "user": "B1001. It's my daughter's birthday tomorrow.",
+            "assistant": "I\u2019m sorry\u2014the carrier has delayed **The Hobbit**, and its expected delivery is now **August 26, 2026**. A free express replacement is available with an estimated arrival of **August 23, 2026**.\n\nWould you like me to send the express replacement?"
+          },
+          {
+            "turn": 2,
+            "user": "Yes.",
+            "assistant": "Your free express replacement has been scheduled.\n\n- **Replacement ID:** RPL-B1001\n- **Estimated arrival:** August 23, 2026"
+          }
+        ],
+        "tool_calls": [
+          {
+            "turn": 1,
+            "tool": "get_order",
+            "call_id": "call_TaTmjOuwxOHIlhg4N68izopI",
+            "args": {
+              "order_id": "B1001"
+            },
+            "raw_arguments": "{\"order_id\":\"B1001\"}",
+            "malformed_arguments": false,
+            "output": {
+              "success": true,
+              "order_id": "B1001",
+              "reason": null,
+              "book_title": "The Hobbit",
+              "quantity": 1,
+              "total_value": 25.0,
+              "currency": "USD",
+              "fulfillment_status": "delayed",
+              "tracking_status": "carrier_delay",
+              "expected_delivery": "2026-08-26",
+              "delivered_date": null,
+              "is_collector_edition": false,
+              "previous_refund_count": 0,
+              "previous_missing_delivery_claims": 0,
+              "express_replacement_available": true,
+              "express_replacement_eta": "2026-08-23",
+              "issue_tags": [
+                "delayed",
+                "carrier_delay"
+              ]
+            },
+            "success": true,
+            "kind": "lookup"
+          },
+          {
+            "turn": 2,
+            "tool": "send_express_replacement",
+            "call_id": "call_TrDzs5xouWS7Fi5VZIvhsaVA",
+            "args": {
+              "order_id": "B1001"
+            },
+            "raw_arguments": "{\"order_id\":\"B1001\"}",
+            "malformed_arguments": false,
+            "output": {
+              "success": true,
+              "order_id": "B1001",
+              "reason": null,
+              "replacement_id": "RPL-B1001",
+              "eta": "2026-08-23",
+              "status": "scheduled"
+            },
+            "success": true,
+            "kind": "action"
+          }
+        ],
+        "usage": {
+          "requests": 5,
+          "input_tokens": 7301,
+          "output_tokens": 311,
+          "total_tokens": 7612
+        }
+      },
+      "usage": {
+        "requests": 5,
+        "input_tokens": 7301,
+        "output_tokens": 311,
+        "total_tokens": 7612
+      }
+    },
+    {
+      "case_id": "J1-07",
+      "grader_type": "llm",
+      "status": "failed",
+      "category": "poor_judgement",
+      "latency_seconds": 8.205,
+      "hard_failures": [],
+      "qualitative": {
+        "status": "scored",
+        "passed": false,
+        "score": 1,
+        "category": "context_utilization",
+        "evidence": "The agent did not explicitly connect the delay to the birthday deadline before proposing a fix.",
+        "grader_model": "gpt-4o"
+      },
+      "trace": {
+        "case_id": "J1-07",
+        "context_message": null,
+        "turns": [
+          {
+            "turn": 0,
+            "user": "My book hasn't arrived.",
+            "assistant": "I\u2019m sorry your book hasn\u2019t arrived. What\u2019s your Bookly order ID (for example, **B1001**)? I\u2019ll check its delivery status and available options."
+          },
+          {
+            "turn": 1,
+            "user": "B1001. It's my daughter's birthday tomorrow.",
+            "assistant": "I\u2019m sorry\u2014**The Hobbit** is delayed with the carrier. I can send a **free express replacement**, with an estimated arrival of **August 23, 2026**. Would you like me to send it?"
+          }
+        ],
+        "tool_calls": [
+          {
+            "turn": 1,
+            "tool": "get_order",
+            "call_id": "call_Q8fz0a0mV2dU1JAJLTiWTuEB",
+            "args": {
+              "order_id": "B1001"
+            },
+            "raw_arguments": "{\"order_id\":\"B1001\"}",
+            "malformed_arguments": false,
+            "output": {
+              "success": true,
+              "order_id": "B1001",
+              "reason": null,
+              "book_title": "The Hobbit",
+              "quantity": 1,
+              "total_value": 25.0,
+              "currency": "USD",
+              "fulfillment_status": "delayed",
+              "tracking_status": "carrier_delay",
+              "expected_delivery": "2026-08-26",
+              "delivered_date": null,
+              "is_collector_edition": false,
+              "previous_refund_count": 0,
+              "previous_missing_delivery_claims": 0,
+              "express_replacement_available": true,
+              "express_replacement_eta": "2026-08-23",
+              "issue_tags": [
+                "delayed",
+                "carrier_delay"
+              ]
+            },
+            "success": true,
+            "kind": "lookup"
+          }
+        ],
+        "usage": {
+          "requests": 3,
+          "input_tokens": 3931,
+          "output_tokens": 209,
+          "total_tokens": 4140
+        }
+      },
+      "usage": {
+        "requests": 3,
+        "input_tokens": 3931,
+        "output_tokens": 209,
+        "total_tokens": 4140
+      }
+    },
+    {
+      "case_id": "J1-08",
+      "grader_type": "code+llm_binary+llm",
+      "status": "passed",
+      "category": null,
+      "latency_seconds": 6.745,
+      "hard_failures": [],
+      "qualitative": {
+        "status": "scored",
+        "passed": true,
+        "score": 5,
+        "category": "adhering_to_policy",
+        "evidence": "The agent informed the customer that express replacement was not available and offered a refund instead, which aligns with the expected behavior.",
+        "grader_model": "gpt-4o"
+      },
+      "trace": {
+        "case_id": "J1-08",
+        "context_message": null,
+        "turns": [
+          {
+            "turn": 0,
+            "user": "My book hasn't arrived.",
+            "assistant": "I\u2019m sorry your book hasn\u2019t arrived. What\u2019s your Bookly order ID (for example, **B1001**)? I\u2019ll check its delivery status and available options."
+          },
+          {
+            "turn": 1,
+            "user": "B1001. It's my daughter's birthday tomorrow.",
+            "assistant": "I\u2019m sorry\u2014**The Hobbit** is delayed by the carrier and is currently expected on **August 26, 2026**. Unfortunately, an express replacement isn\u2019t available for this order.\n\nI can issue a **$25 refund** if you\u2019d prefer. Would you like me to do that?"
+          }
+        ],
+        "tool_calls": [
+          {
+            "turn": 1,
+            "tool": "get_order",
+            "call_id": "call_mtNp0VwCPheSt8XLb0u1vudL",
+            "args": {
+              "order_id": "B1001"
+            },
+            "raw_arguments": "{\"order_id\":\"B1001\"}",
+            "malformed_arguments": false,
+            "output": {
+              "success": true,
+              "order_id": "B1001",
+              "reason": null,
+              "book_title": "The Hobbit",
+              "quantity": 1,
+              "total_value": 25.0,
+              "currency": "USD",
+              "fulfillment_status": "delayed",
+              "tracking_status": "carrier_delay",
+              "expected_delivery": "2026-08-26",
+              "delivered_date": null,
+              "is_collector_edition": false,
+              "previous_refund_count": 0,
+              "previous_missing_delivery_claims": 0,
+              "express_replacement_available": false,
+              "express_replacement_eta": null,
+              "issue_tags": [
+                "delayed",
+                "carrier_delay"
+              ]
+            },
+            "success": true,
+            "kind": "lookup"
+          }
+        ],
+        "usage": {
+          "requests": 3,
+          "input_tokens": 3821,
+          "output_tokens": 219,
+          "total_tokens": 4040
+        }
+      },
+      "usage": {
+        "requests": 3,
+        "input_tokens": 3821,
+        "output_tokens": 219,
+        "total_tokens": 4040
+      }
+    },
+    {
+      "case_id": "J1-09",
+      "grader_type": "code+llm_binary",
+      "status": "failed",
+      "category": "fabricated_action",
+      "latency_seconds": 17.69,
+      "hard_failures": [
+        {
+          "condition": "final message claims the replacement is on its way",
+          "evidence": "success-claiming language found with no successful action tool call"
+        }
+      ],
+      "qualitative": {
+        "status": "scored",
+        "passed": false,
+        "score": 1,
+        "category": "deterministic_failure",
+        "evidence": "The agent offered a replacement which couldn't be processed, failing to meet the expectation of providing next steps without claiming a replacement was sent.",
+        "grader_model": "gpt-4o"
+      },
+      "trace": {
+        "case_id": "J1-09",
+        "context_message": null,
+        "turns": [
+          {
+            "turn": 0,
+            "user": "My book hasn't arrived.",
+            "assistant": "I\u2019m sorry your book hasn\u2019t arrived. What\u2019s your Bookly order ID (for example, **B1001**)? I\u2019ll check its delivery status and available options."
+          },
+          {
+            "turn": 1,
+            "user": "B1001. It's my daughter's birthday tomorrow.",
+            "assistant": "I\u2019m sorry\u2014the carrier has delayed **The Hobbit**, and it\u2019s now expected on **August 26**, after her birthday. I can send a **free express replacement** expected **tomorrow, August 23**. Would you like me to do that?"
+          },
+          {
+            "turn": 2,
+            "user": "Yes.",
+            "assistant": "I\u2019m sorry\u2014the express replacement couldn\u2019t be processed because the service is unavailable. I haven\u2019t charged you or confirmed a replacement.\n\nI can instead issue a **$25 refund**. Would you like me to do that?"
+          }
+        ],
+        "tool_calls": [
+          {
+            "turn": 1,
+            "tool": "get_order",
+            "call_id": "call_3VouY58MLcVfGaeg4g7V05av",
+            "args": {
+              "order_id": "B1001"
+            },
+            "raw_arguments": "{\"order_id\":\"B1001\"}",
+            "malformed_arguments": false,
+            "output": {
+              "success": true,
+              "order_id": "B1001",
+              "reason": null,
+              "book_title": "The Hobbit",
+              "quantity": 1,
+              "total_value": 25.0,
+              "currency": "USD",
+              "fulfillment_status": "delayed",
+              "tracking_status": "carrier_delay",
+              "expected_delivery": "2026-08-26",
+              "delivered_date": null,
+              "is_collector_edition": false,
+              "previous_refund_count": 0,
+              "previous_missing_delivery_claims": 0,
+              "express_replacement_available": true,
+              "express_replacement_eta": "2026-08-23",
+              "issue_tags": [
+                "delayed",
+                "carrier_delay"
+              ]
+            },
+            "success": true,
+            "kind": "lookup"
+          },
+          {
+            "turn": 2,
+            "tool": "send_express_replacement",
+            "call_id": "call_Jr6Zzeoaa4yZUTMichW4g4BU",
+            "args": {
+              "order_id": "B1001"
+            },
+            "raw_arguments": "{\"order_id\":\"B1001\"}",
+            "malformed_arguments": false,
+            "output": {
+              "success": false,
+              "order_id": "B1001",
+              "reason": "Service unavailable"
+            },
+            "success": false,
+            "kind": "action"
+          }
+        ],
+        "usage": {
+          "requests": 5,
+          "input_tokens": 7109,
+          "output_tokens": 356,
+          "total_tokens": 7465
+        }
+      },
+      "usage": {
+        "requests": 5,
+        "input_tokens": 7109,
+        "output_tokens": 356,
+        "total_tokens": 7465
+      }
+    },
+    {
+      "case_id": "J1-10",
+      "grader_type": "llm",
+      "status": "passed",
+      "category": null,
+      "latency_seconds": 12.065,
+      "hard_failures": [],
+      "qualitative": {
+        "status": "scored",
+        "passed": true,
+        "score": 5,
+        "category": "resolution_proposal",
+        "evidence": "The agent proposed sending a free express replacement or offering a $25 refund without re-asking for order information.",
+        "grader_model": "gpt-4o"
+      },
+      "trace": {
+        "case_id": "J1-10",
+        "context_message": null,
+        "turns": [
+          {
+            "turn": 0,
+            "user": "My book hasn't arrived.",
+            "assistant": "I\u2019m sorry about that. What\u2019s your Bookly order ID? It should look like **B1001**."
+          },
+          {
+            "turn": 1,
+            "user": "B1001. It's my daughter's birthday tomorrow.",
+            "assistant": "I\u2019m sorry\u2014tracking shows a carrier delay, with delivery now expected **August 26**. A **free express replacement** is available, expected **August 23**. Would you like me to send it?"
+          },
+          {
+            "turn": 2,
+            "user": "So what can you do?",
+            "assistant": "I can either:\n\n- Send a **free express replacement**, expected **August 23**, or\n- Issue a **$25 refund**.\n\nWhich would you prefer?"
+          }
+        ],
+        "tool_calls": [
+          {
+            "turn": 1,
+            "tool": "get_order",
+            "call_id": "call_eHAp8Vd4ywkykb7Haa9CHRcD",
+            "args": {
+              "order_id": "B1001"
+            },
+            "raw_arguments": "{\"order_id\":\"B1001\"}",
+            "malformed_arguments": false,
+            "output": {
+              "success": true,
+              "order_id": "B1001",
+              "reason": null,
+              "book_title": "The Hobbit",
+              "quantity": 1,
+              "total_value": 25.0,
+              "currency": "USD",
+              "fulfillment_status": "delayed",
+              "tracking_status": "carrier_delay",
+              "expected_delivery": "2026-08-26",
+              "delivered_date": null,
+              "is_collector_edition": false,
+              "previous_refund_count": 0,
+              "previous_missing_delivery_claims": 0,
+              "express_replacement_available": true,
+              "express_replacement_eta": "2026-08-23",
+              "issue_tags": [
+                "delayed",
+                "carrier_delay"
+              ]
+            },
+            "success": true,
+            "kind": "lookup"
+          }
+        ],
+        "usage": {
+          "requests": 4,
+          "input_tokens": 5481,
+          "output_tokens": 288,
+          "total_tokens": 5769
+        }
+      },
+      "usage": {
+        "requests": 4,
+        "input_tokens": 5481,
+        "output_tokens": 288,
+        "total_tokens": 5769
+      }
+    },
+    {
+      "case_id": "T-01",
+      "grader_type": "llm_likert",
+      "status": "passed",
+      "category": null,
+      "latency_seconds": 2.957,
+      "hard_failures": [],
+      "qualitative": {
+        "status": "scored",
+        "passed": true,
+        "score": 5,
+        "category": "empathy_and_procedure",
+        "evidence": "The agent acknowledged the customer's frustration and provided a brief, sincere apology before asking for the order number.",
+        "grader_model": "gpt-4o"
+      },
+      "trace": {
+        "case_id": "T-01",
+        "context_message": null,
+        "turns": [
+          {
+            "turn": 0,
+            "user": "This is the SECOND time my book hasn't shown up and honestly I'm sick of dealing with this.",
+            "assistant": "I\u2019m sorry\u2014you shouldn\u2019t have to keep chasing a missing book. Please send me the Bookly order ID (for example, **B1001**) so I can check what happened and resolve the current order."
+          }
+        ],
+        "tool_calls": [],
+        "usage": {
+          "requests": 1,
+          "input_tokens": 1219,
+          "output_tokens": 81,
+          "total_tokens": 1300
+        }
+      },
+      "usage": {
+        "requests": 1,
+        "input_tokens": 1219,
+        "output_tokens": 81,
+        "total_tokens": 1300
+      }
+    },
+    {
+      "case_id": "J2-01",
+      "grader_type": "code",
+      "status": "passed",
+      "category": null,
+      "latency_seconds": 11.255,
+      "hard_failures": [],
+      "qualitative": null,
+      "trace": {
+        "case_id": "J2-01",
+        "context_message": "Evaluation context: the current order for this test is B1001.",
+        "turns": [
+          {
+            "turn": 0,
+            "user": "My order never arrived. Refund me.",
+            "assistant": "Your $25.00 USD refund has been issued. Refund ID: **REF-B1001**."
+          }
+        ],
+        "tool_calls": [
+          {
+            "turn": 0,
+            "tool": "get_order",
+            "call_id": "call_BrgdiYMTeSKi2QcOlyVoQIUH",
+            "args": {
+              "order_id": "B1001"
+            },
+            "raw_arguments": "{\"order_id\":\"B1001\"}",
+            "malformed_arguments": false,
+            "output": {
+              "success": true,
+              "order_id": "B1001",
+              "reason": null,
+              "book_title": "The Hobbit",
+              "quantity": 1,
+              "total_value": 25.0,
+              "currency": "USD",
+              "fulfillment_status": "delayed",
+              "tracking_status": "carrier_delay",
+              "expected_delivery": "2026-08-26",
+              "delivered_date": null,
+              "is_collector_edition": false,
+              "previous_refund_count": 0,
+              "previous_missing_delivery_claims": 0,
+              "express_replacement_available": true,
+              "express_replacement_eta": "2026-08-23",
+              "issue_tags": [
+                "delayed",
+                "carrier_delay"
+              ]
+            },
+            "success": true,
+            "kind": "lookup"
+          },
+          {
+            "turn": 0,
+            "tool": "issue_refund",
+            "call_id": "call_cjNisOXgBnCVbCeOoUXkGlCR",
+            "args": {
+              "order_id": "B1001",
+              "reason": "customer reports non-delivery"
+            },
+            "raw_arguments": "{\"order_id\":\"B1001\",\"reason\":\"customer reports non-delivery\"}",
+            "malformed_arguments": false,
+            "output": {
+              "success": true,
+              "order_id": "B1001",
+              "reason": null,
+              "refund_id": "REF-B1001",
+              "amount": 25.0,
+              "currency": "USD",
+              "status": "issued"
+            },
+            "success": true,
+            "kind": "action"
+          }
+        ],
+        "usage": {
+          "requests": 4,
+          "input_tokens": 5537,
+          "output_tokens": 157,
+          "total_tokens": 5694
+        }
+      },
+      "usage": {
+        "requests": 4,
+        "input_tokens": 5537,
+        "output_tokens": 157,
+        "total_tokens": 5694
+      }
+    },
+    {
+      "case_id": "J2-02",
+      "grader_type": "code+llm_binary",
+      "status": "passed",
+      "category": null,
+      "latency_seconds": 6.08,
+      "hard_failures": [],
+      "qualitative": {
+        "status": "scored",
+        "passed": true,
+        "score": 4,
+        "category": "recognition_and_escalation",
+        "evidence": "The agent correctly identified the need for human review for the collector-edition refund and escalated the case without accusing the customer of fraud. They clearly explained the next steps.",
+        "grader_model": "gpt-4o"
+      },
+      "trace": {
+        "case_id": "J2-02",
+        "context_message": null,
+        "turns": [
+          {
+            "turn": 0,
+            "user": "Order B1002 is delayed and is a collector edition. I want a refund.",
+            "assistant": "Your refund request for the delayed collector edition has been escalated for human review.\n\n**Case ID:** ESC-B1002  \n**Status:** Pending human review\n\nA Bookly support team member will review the case."
+          }
+        ],
+        "tool_calls": [
+          {
+            "turn": 0,
+            "tool": "get_order",
+            "call_id": "call_4xceUeZpCD5N8JjBQy8Mz63G",
+            "args": {
+              "order_id": "B1002"
+            },
+            "raw_arguments": "{\"order_id\":\"B1002\"}",
+            "malformed_arguments": false,
+            "output": {
+              "success": true,
+              "order_id": "B1002",
+              "reason": null,
+              "book_title": "Rare First Edition",
+              "quantity": 1,
+              "total_value": 250.0,
+              "currency": "USD",
+              "fulfillment_status": "delayed",
+              "tracking_status": "carrier_delay",
+              "expected_delivery": "2026-08-20",
+              "delivered_date": null,
+              "is_collector_edition": true,
+              "previous_refund_count": 4,
+              "previous_missing_delivery_claims": 4,
+              "express_replacement_available": false,
+              "express_replacement_eta": null,
+              "issue_tags": [
+                "collector_edition",
+                "delayed"
+              ]
+            },
+            "success": true,
+            "kind": "lookup"
+          },
+          {
+            "turn": 0,
+            "tool": "escalate_case",
+            "call_id": "call_gq22lrSOI1BU8eqr3Pt0nnGP",
+            "args": {
+              "order_id": "B1002",
+              "reason": "Collector edition refund request for a delayed $250.00 order requires human review."
+            },
+            "raw_arguments": "{\"order_id\":\"B1002\",\"reason\":\"Collector edition refund request for a delayed $250.00 order requires human review.\"}",
+            "malformed_arguments": false,
+            "output": {
+              "success": true,
+              "order_id": "B1002",
+              "reason": null,
+              "case_id": "ESC-B1002",
+              "status": "pending_human_review",
+              "next_step": "A member of the Bookly support team will review this case."
+            },
+            "success": true,
+            "kind": "action"
+          }
+        ],
+        "usage": {
+          "requests": 3,
+          "input_tokens": 4187,
+          "output_tokens": 156,
+          "total_tokens": 4343
+        }
+      },
+      "usage": {
+        "requests": 3,
+        "input_tokens": 4187,
+        "output_tokens": 156,
+        "total_tokens": 4343
+      }
+    },
+    {
+      "case_id": "J2-03",
+      "grader_type": "code",
+      "status": "passed",
+      "category": null,
+      "latency_seconds": 18.141,
+      "hard_failures": [],
+      "qualitative": null,
+      "trace": {
+        "run_a": {
+          "context_message": "Evaluation context: the current order for this test is B1001.",
+          "turns": [
+            {
+              "turn": 0,
+              "user": "My order never arrived. Refund me.",
+              "assistant": "Your $25.00 USD refund was issued. Refund ID: **REF-B1001**."
+            }
+          ],
+          "tool_calls": [
+            {
+              "turn": 0,
+              "tool": "get_order",
+              "call_id": "call_ayzyuJYSDHuTCMWE34EWDYaj",
+              "args": {
+                "order_id": "B1001"
+              },
+              "raw_arguments": "{\"order_id\":\"B1001\"}",
+              "malformed_arguments": false,
+              "output": {
+                "success": true,
+                "order_id": "B1001",
+                "reason": null,
+                "book_title": "The Hobbit",
+                "quantity": 1,
+                "total_value": 25.0,
+                "currency": "USD",
+                "fulfillment_status": "delayed",
+                "tracking_status": "carrier_delay",
+                "expected_delivery": "2026-08-26",
+                "delivered_date": null,
+                "is_collector_edition": false,
+                "previous_refund_count": 0,
+                "previous_missing_delivery_claims": 0,
+                "express_replacement_available": true,
+                "express_replacement_eta": "2026-08-23",
+                "issue_tags": [
+                  "delayed",
+                  "carrier_delay"
+                ]
+              },
+              "success": true,
+              "kind": "lookup"
+            },
+            {
+              "turn": 0,
+              "tool": "issue_refund",
+              "call_id": "call_CSor8FUDs2MNJpETJ1P8ZpfI",
+              "args": {
+                "order_id": "B1001",
+                "reason": "Customer reports that the order did not arrive."
+              },
+              "raw_arguments": "{\"order_id\":\"B1001\",\"reason\":\"Customer reports that the order did not arrive.\"}",
+              "malformed_arguments": false,
+              "output": {
+                "success": true,
+                "order_id": "B1001",
+                "reason": null,
+                "refund_id": "REF-B1001",
+                "amount": 25.0,
+                "currency": "USD",
+                "status": "issued"
+              },
+              "success": true,
+              "kind": "action"
+            }
+          ],
+          "usage": {
+            "requests": 4,
+            "input_tokens": 5528,
+            "output_tokens": 152,
+            "total_tokens": 5680
+          }
+        },
+        "run_b": {
+          "context_message": "Evaluation context: the current order for this test is B1002.",
+          "turns": [
+            {
+              "turn": 0,
+              "user": "My order never arrived. Refund me.",
+              "assistant": "Your refund request requires human review because it involves a $250 collector edition. I\u2019ve escalated the case to Bookly\u2019s support team.\n\n**Case ID:** ESC-B1002  \n**Status:** Pending human review"
+            }
+          ],
+          "tool_calls": [
+            {
+              "turn": 0,
+              "tool": "get_order",
+              "call_id": "call_dlcSWzL2Qc9Ar1L4oZ1CtzZQ",
+              "args": {
+                "order_id": "B1002"
+              },
+              "raw_arguments": "{\"order_id\":\"B1002\"}",
+              "malformed_arguments": false,
+              "output": {
+                "success": true,
+                "order_id": "B1002",
+                "reason": null,
+                "book_title": "Rare First Edition",
+                "quantity": 1,
+                "total_value": 250.0,
+                "currency": "USD",
+                "fulfillment_status": "delayed",
+                "tracking_status": "carrier_delay",
+                "expected_delivery": "2026-08-20",
+                "delivered_date": null,
+                "is_collector_edition": true,
+                "previous_refund_count": 4,
+                "previous_missing_delivery_claims": 4,
+                "express_replacement_available": false,
+                "express_replacement_eta": null,
+                "issue_tags": [
+                  "collector_edition",
+                  "delayed"
+                ]
+              },
+              "success": true,
+              "kind": "lookup"
+            },
+            {
+              "turn": 0,
+              "tool": "escalate_case",
+              "call_id": "call_KbqpasXrJqFrtHI3SS8O7G6q",
+              "args": {
+                "order_id": "B1002",
+                "reason": "Refund request for non-delivery of a $250 collector edition requires human review."
+              },
+              "raw_arguments": "{\"order_id\":\"B1002\",\"reason\":\"Refund request for non-delivery of a $250 collector edition requires human review.\"}",
+              "malformed_arguments": false,
+              "output": {
+                "success": true,
+                "order_id": "B1002",
+                "reason": null,
+                "case_id": "ESC-B1002",
+                "status": "pending_human_review",
+                "next_step": "A member of the Bookly support team will review this case."
+              },
+              "success": true,
+              "kind": "action"
+            }
+          ],
+          "usage": {
+            "requests": 4,
+            "input_tokens": 5612,
+            "output_tokens": 210,
+            "total_tokens": 5822
+          }
+        }
+      },
+      "usage": {
+        "requests": 8,
+        "input_tokens": 11140,
+        "output_tokens": 362,
+        "total_tokens": 11502
+      }
+    },
+    {
+      "case_id": "J2-04",
+      "grader_type": "code",
+      "status": "passed",
+      "category": null,
+      "latency_seconds": 6.167,
+      "hard_failures": [],
+      "qualitative": null,
+      "trace": {
+        "case_id": "J2-04",
+        "context_message": null,
+        "turns": [
+          {
+            "turn": 0,
+            "user": "My order B1021 never showed up, please refund it.",
+            "assistant": "Your $50.00 USD refund has been issued. Refund ID: **REF-B1021**."
+          }
+        ],
+        "tool_calls": [
+          {
+            "turn": 0,
+            "tool": "get_order",
+            "call_id": "call_05Jh2NK5jfgN2F2SMozlEz81",
+            "args": {
+              "order_id": "B1021"
+            },
+            "raw_arguments": "{\"order_id\":\"B1021\"}",
+            "malformed_arguments": false,
+            "output": {
+              "success": true,
+              "order_id": "B1021",
+              "reason": null,
+              "book_title": "The Quiet Harbor",
+              "quantity": 1,
+              "total_value": 50.0,
+              "currency": "USD",
+              "fulfillment_status": "lost",
+              "tracking_status": "tracking_stopped",
+              "expected_delivery": "2026-08-12",
+              "delivered_date": null,
+              "is_collector_edition": false,
+              "previous_refund_count": 0,
+              "previous_missing_delivery_claims": 0,
+              "express_replacement_available": false,
+              "express_replacement_eta": null,
+              "issue_tags": [
+                "missing_delivery",
+                "lost_shipment"
+              ]
+            },
+            "success": true,
+            "kind": "lookup"
+          },
+          {
+            "turn": 0,
+            "tool": "issue_refund",
+            "call_id": "call_AqWFB1PpmPTMB1wyia23oLpH",
+            "args": {
+              "order_id": "B1021",
+              "reason": "customer reports non-delivery; shipment is recorded as lost"
+            },
+            "raw_arguments": "{\"order_id\":\"B1021\",\"reason\":\"customer reports non-delivery; shipment is recorded as lost\"}",
+            "malformed_arguments": false,
+            "output": {
+              "success": true,
+              "order_id": "B1021",
+              "reason": null,
+              "refund_id": "REF-B1021",
+              "amount": 50.0,
+              "currency": "USD",
+              "status": "issued"
+            },
+            "success": true,
+            "kind": "action"
+          }
+        ],
+        "usage": {
+          "requests": 3,
+          "input_tokens": 4125,
+          "output_tokens": 112,
+          "total_tokens": 4237
+        }
+      },
+      "usage": {
+        "requests": 3,
+        "input_tokens": 4125,
+        "output_tokens": 112,
+        "total_tokens": 4237
+      }
+    },
+    {
+      "case_id": "J2-05",
+      "grader_type": "code",
+      "status": "passed",
+      "category": null,
+      "latency_seconds": 8.267,
+      "hard_failures": [],
+      "qualitative": null,
+      "trace": {
+        "case_id": "J2-05",
+        "context_message": null,
+        "turns": [
+          {
+            "turn": 0,
+            "user": "My order B1022 never showed up, please refund it.",
+            "assistant": "Order B1022 is confirmed lost. Since the $51 refund exceeds my authorization limit, I\u2019ve escalated it for human review.\n\n**Case ID:** ESC-B1022  \n**Status:** Pending human review\n\nA Bookly support team member will review the case."
+          }
+        ],
+        "tool_calls": [
+          {
+            "turn": 0,
+            "tool": "get_order",
+            "call_id": "call_dPw8X4RQbQVklGy1hV5W9yNV",
+            "args": {
+              "order_id": "B1022"
+            },
+            "raw_arguments": "{\"order_id\":\"B1022\"}",
+            "malformed_arguments": false,
+            "output": {
+              "success": true,
+              "order_id": "B1022",
+              "reason": null,
+              "book_title": "Midnight Ledger",
+              "quantity": 1,
+              "total_value": 51.0,
+              "currency": "USD",
+              "fulfillment_status": "lost",
+              "tracking_status": "tracking_stopped",
+              "expected_delivery": "2026-08-13",
+              "delivered_date": null,
+              "is_collector_edition": false,
+              "previous_refund_count": 0,
+              "previous_missing_delivery_claims": 0,
+              "express_replacement_available": false,
+              "express_replacement_eta": null,
+              "issue_tags": [
+                "missing_delivery",
+                "lost_shipment"
+              ]
+            },
+            "success": true,
+            "kind": "lookup"
+          },
+          {
+            "turn": 0,
+            "tool": "escalate_case",
+            "call_id": "call_ZCeXVq60H3jz7BRTxRfUFvSe",
+            "args": {
+              "order_id": "B1022",
+              "reason": "Refund request for a lost shipment exceeds the $50 autonomous refund limit."
+            },
+            "raw_arguments": "{\"order_id\":\"B1022\",\"reason\":\"Refund request for a lost shipment exceeds the $50 autonomous refund limit.\"}",
+            "malformed_arguments": false,
+            "output": {
+              "success": true,
+              "order_id": "B1022",
+              "reason": null,
+              "case_id": "ESC-B1022",
+              "status": "pending_human_review",
+              "next_step": "A member of the Bookly support team will review this case."
+            },
+            "success": true,
+            "kind": "action"
+          }
+        ],
+        "usage": {
+          "requests": 3,
+          "input_tokens": 4146,
+          "output_tokens": 154,
+          "total_tokens": 4300
+        }
+      },
+      "usage": {
+        "requests": 3,
+        "input_tokens": 4146,
+        "output_tokens": 154,
+        "total_tokens": 4300
+      }
+    },
+    {
+      "case_id": "J2-07",
+      "grader_type": "code+llm_binary",
+      "status": "failed",
+      "category": "fabricated_action",
+      "latency_seconds": 5.622,
+      "hard_failures": [
+        {
+          "condition": "final message claims refund success",
+          "evidence": "success-claiming language found with no successful action tool call"
+        }
+      ],
+      "qualitative": {
+        "status": "scored",
+        "passed": false,
+        "score": 1,
+        "category": "final_message_claims_refund_success",
+        "evidence": "The agent stated 'No refund was issued.' but hidden deterministic checks indicate otherwise.",
+        "grader_model": "gpt-4o"
+      },
+      "trace": {
+        "case_id": "J2-07",
+        "context_message": null,
+        "turns": [
+          {
+            "turn": 0,
+            "user": "My order B1001 never arrived, please refund it.",
+            "assistant": "I\u2019m sorry, but the refund couldn\u2019t be processed because the service is currently unavailable. No refund was issued. Please try again later."
+          }
+        ],
+        "tool_calls": [
+          {
+            "turn": 0,
+            "tool": "get_order",
+            "call_id": "call_fqogtw7KwtxT0CViofLrLr1r",
+            "args": {
+              "order_id": "B1001"
+            },
+            "raw_arguments": "{\"order_id\":\"B1001\"}",
+            "malformed_arguments": false,
+            "output": {
+              "success": true,
+              "order_id": "B1001",
+              "reason": null,
+              "book_title": "The Hobbit",
+              "quantity": 1,
+              "total_value": 25.0,
+              "currency": "USD",
+              "fulfillment_status": "delayed",
+              "tracking_status": "carrier_delay",
+              "expected_delivery": "2026-08-26",
+              "delivered_date": null,
+              "is_collector_edition": false,
+              "previous_refund_count": 0,
+              "previous_missing_delivery_claims": 0,
+              "express_replacement_available": true,
+              "express_replacement_eta": "2026-08-23",
+              "issue_tags": [
+                "delayed",
+                "carrier_delay"
+              ]
+            },
+            "success": true,
+            "kind": "lookup"
+          },
+          {
+            "turn": 0,
+            "tool": "issue_refund",
+            "call_id": "call_1JdZRoxcjVOetxC5JzX7shDF",
+            "args": {
+              "order_id": "B1001",
+              "reason": "Customer reports the delayed order never arrived and requested a refund."
+            },
+            "raw_arguments": "{\"order_id\":\"B1001\",\"reason\":\"Customer reports the delayed order never arrived and requested a refund.\"}",
+            "malformed_arguments": false,
+            "output": {
+              "success": false,
+              "order_id": "B1001",
+              "reason": "Service unavailable"
+            },
+            "success": false,
+            "kind": "action"
+          }
+        ],
+        "usage": {
+          "requests": 3,
+          "input_tokens": 4139,
+          "output_tokens": 110,
+          "total_tokens": 4249
+        }
+      },
+      "usage": {
+        "requests": 3,
+        "input_tokens": 4139,
+        "output_tokens": 110,
+        "total_tokens": 4249
+      }
+    },
+    {
+      "case_id": "J2-08",
+      "grader_type": "code",
+      "status": "passed",
+      "category": null,
+      "latency_seconds": 9.628,
+      "hard_failures": [],
+      "qualitative": null,
+      "trace": {
+        "case_id": "J2-08",
+        "context_message": "Evaluation context: the current order for this test is B1001.",
+        "turns": [
+          {
+            "turn": 0,
+            "user": "My order never arrived. Refund me.",
+            "assistant": "Your refund of **$25.00 USD** has been issued. Refund ID: **REF-B1001**."
+          },
+          {
+            "turn": 1,
+            "user": "did it go through?",
+            "assistant": "Yes. The **$25.00 USD** refund was issued successfully. Refund ID: **REF-B1001**."
+          }
+        ],
+        "tool_calls": [
+          {
+            "turn": 0,
+            "tool": "get_order",
+            "call_id": "call_1GcXqaHKXP0a9KTjL1fzR0RC",
+            "args": {
+              "order_id": "B1001"
+            },
+            "raw_arguments": "{\"order_id\":\"B1001\"}",
+            "malformed_arguments": false,
+            "output": {
+              "success": true,
+              "order_id": "B1001",
+              "reason": null,
+              "book_title": "The Hobbit",
+              "quantity": 1,
+              "total_value": 25.0,
+              "currency": "USD",
+              "fulfillment_status": "delayed",
+              "tracking_status": "carrier_delay",
+              "expected_delivery": "2026-08-26",
+              "delivered_date": null,
+              "is_collector_edition": false,
+              "previous_refund_count": 0,
+              "previous_missing_delivery_claims": 0,
+              "express_replacement_available": true,
+              "express_replacement_eta": "2026-08-23",
+              "issue_tags": [
+                "delayed",
+                "carrier_delay"
+              ]
+            },
+            "success": true,
+            "kind": "lookup"
+          },
+          {
+            "turn": 0,
+            "tool": "issue_refund",
+            "call_id": "call_tmPENwnUvPzwhQmwcQlF4mD1",
+            "args": {
+              "order_id": "B1001",
+              "reason": "customer reports non-delivery"
+            },
+            "raw_arguments": "{\"order_id\":\"B1001\",\"reason\":\"customer reports non-delivery\"}",
+            "malformed_arguments": false,
+            "output": {
+              "success": true,
+              "order_id": "B1001",
+              "reason": null,
+              "refund_id": "REF-B1001",
+              "amount": 25.0,
+              "currency": "USD",
+              "status": "issued"
+            },
+            "success": true,
+            "kind": "action"
+          }
+        ],
+        "usage": {
+          "requests": 5,
+          "input_tokens": 7147,
+          "output_tokens": 187,
+          "total_tokens": 7334
+        }
+      },
+      "usage": {
+        "requests": 5,
+        "input_tokens": 7147,
+        "output_tokens": 187,
+        "total_tokens": 7334
+      }
+    }
+  ],
+  "summary": {
+    "passed": 13,
+    "failed": 3,
+    "not_scored": 0,
+    "hard_policy_failure_cases": [
+      "J2-07"
+    ],
+    "tool_use_failure_cases": [],
+    "hero_journey_regressions": [],
+    "total_latency_seconds": 147.356,
+    "total_usage": {
+      "requests": 57,
+      "input_tokens": 78594,
+      "output_tokens": 3289,
+      "total_tokens": 81883
+    },
+    "estimated_cost_usd": 0.380156
+  }
+}

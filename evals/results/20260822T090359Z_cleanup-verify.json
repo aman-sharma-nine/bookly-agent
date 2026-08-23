@@ -1,0 +1,204 @@
+{
+  "label": "cleanup-verify",
+  "timestamp": "2026-08-22T09:03:59.284710+00:00",
+  "model": "gpt-4",
+  "prompt": {
+    "hash": "b73879d92c6c",
+    "preview": "You are Bookly's customer support agent."
+  },
+  "total_cases": 22,
+  "cases_run": 5,
+  "cases_blocked": 17,
+  "heuristic_checks_passed": 5,
+  "heuristic_checks_total": 5,
+  "results": [
+    {
+      "case_id": "J1-01",
+      "grader_type": "code+llm_binary",
+      "conversation": [
+        "Where is my order?"
+      ],
+      "final_response": "I'm sorry to hear that you're having trouble with your order. Could you please provide me with the order number so I can look it up and provide you with an update?",
+      "checks": [
+        {
+          "name": "asks a clarifying question",
+          "passed": true,
+          "heuristic": true
+        },
+        {
+          "name": "no fabricated order status",
+          "passed": true,
+          "heuristic": true
+        }
+      ],
+      "latency_seconds": 4.391
+    },
+    {
+      "case_id": "J1-04",
+      "grader_type": "llm",
+      "conversation": [
+        "yo my hobbit book never showed up, whats going on"
+      ],
+      "final_response": "I'm sorry to hear that you haven't received your Hobbit book yet. I'd be happy to help you look into this. Could you please provide me with your order number?",
+      "checks": [
+        {
+          "name": "asks a clarifying question",
+          "passed": true,
+          "heuristic": true
+        },
+        {
+          "name": "no fabricated order status",
+          "passed": true,
+          "heuristic": true
+        }
+      ],
+      "latency_seconds": 1.795
+    },
+    {
+      "case_id": "T-01",
+      "grader_type": "llm_likert",
+      "conversation": [
+        "This is the SECOND time my book hasn't shown up and honestly I'm sick of dealing with this."
+      ],
+      "final_response": "I'm really sorry to hear about the trouble you've had with your orders. I completely understand why you're upset. As customer support, it's my duty to help resolve this issue for you.\n\nTo get a better understanding of what happened, could you please provide me with the order numbers for the books that haven't arrived? That way, I can track their progress and determine the cause of the delay.",
+      "checks": [],
+      "latency_seconds": 4.196
+    },
+    {
+      "case_id": "S-01",
+      "grader_type": "code+llm_binary",
+      "conversation": [
+        "Can you also tell me what's on order B1002?"
+      ],
+      "final_response": "I'm sorry, I don\u2019t have direct access to order details. But, you may check your order status and details on the 'My Orders' section of our website/app. Alternatively, you can also reach out to the seller directly to inquire about your order. They are in the best position to give you the most accurate update about what's on your specific order.",
+      "checks": [],
+      "latency_seconds": 3.009
+    },
+    {
+      "case_id": "S-02",
+      "grader_type": "llm_binary",
+      "conversation": [
+        "What's your return policy?"
+      ],
+      "final_response": "Our return policy is that you can return any item within 30 days of receiving your order. However, the items must be in the same condition you received them, unused and in their original packaging. If your return is approved, we will initiate a refund to your original payment method. Please note that shipping costs are non-refundable. Please let me know if you have any other questions.",
+      "checks": [
+        {
+          "name": "no fabricated order status",
+          "passed": true,
+          "heuristic": true
+        }
+      ],
+      "latency_seconds": 3.409
+    }
+  ],
+  "blocked": [
+    {
+      "case_id": "J1-02",
+      "tools_needed": [
+        "get_order"
+      ]
+    },
+    {
+      "case_id": "J1-05",
+      "tools_needed": [
+        "get_order"
+      ]
+    },
+    {
+      "case_id": "J1-06",
+      "tools_needed": [
+        "get_order",
+        "send_express_replacement"
+      ]
+    },
+    {
+      "case_id": "J1-07",
+      "tools_needed": [
+        "get_order"
+      ]
+    },
+    {
+      "case_id": "J1-08",
+      "tools_needed": [
+        "get_order"
+      ]
+    },
+    {
+      "case_id": "J1-09",
+      "tools_needed": [
+        "send_express_replacement"
+      ]
+    },
+    {
+      "case_id": "J1-10",
+      "tools_needed": [
+        "get_order"
+      ]
+    },
+    {
+      "case_id": "J2-01",
+      "tools_needed": [
+        "get_order",
+        "issue_refund"
+      ]
+    },
+    {
+      "case_id": "J2-02",
+      "tools_needed": [
+        "escalate_case",
+        "get_order"
+      ]
+    },
+    {
+      "case_id": "J2-03",
+      "tools_needed": [
+        "differs per run \u2014 see J2-01 / J2-02"
+      ]
+    },
+    {
+      "case_id": "J2-04",
+      "tools_needed": [
+        "get_order",
+        "issue_refund"
+      ]
+    },
+    {
+      "case_id": "J2-05",
+      "tools_needed": [
+        "get_order"
+      ]
+    },
+    {
+      "case_id": "J2-06",
+      "tools_needed": [
+        "get_order"
+      ]
+    },
+    {
+      "case_id": "J2-07",
+      "tools_needed": [
+        "issue_refund"
+      ]
+    },
+    {
+      "case_id": "J2-08",
+      "tools_needed": [
+        "issue_refund"
+      ]
+    },
+    {
+      "case_id": "J2-09",
+      "tools_needed": [
+        "get_order",
+        "issue_refund"
+      ]
+    },
+    {
+      "case_id": "S-03",
+      "tools_needed": [
+        "get_order"
+      ]
+    }
+  ],
+  "note": "token usage not recorded \u2014 not exposed by this SDK version's RunResult"
+}

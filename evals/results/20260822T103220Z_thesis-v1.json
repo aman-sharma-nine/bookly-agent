@@ -1,0 +1,146 @@
+{
+  "label": "thesis-v1",
+  "split": "dev",
+  "timestamp": "2026-08-22T10:32:20.287936+00:00",
+  "model": "gpt-4",
+  "prompt": {
+    "hash": "cec192483b52",
+    "preview": "You are Bookly's customer support agent."
+  },
+  "total_cases": 22,
+  "cases_in_scope": 17,
+  "cases_run": 2,
+  "cases_blocked": 15,
+  "heuristic_checks_passed": 2,
+  "heuristic_checks_total": 2,
+  "results": [
+    {
+      "case_id": "J1-01",
+      "grader_type": "code+llm_binary",
+      "conversation": [
+        "Where is my order?"
+      ],
+      "final_response": "I apologize for the inconvenience. Can you provide me with your order number, so I can check its status for you?",
+      "checks": [
+        {
+          "name": "asks a clarifying question",
+          "passed": true,
+          "heuristic": true
+        },
+        {
+          "name": "no fabricated order status",
+          "passed": true,
+          "heuristic": true
+        }
+      ],
+      "latency_seconds": 2.071
+    },
+    {
+      "case_id": "T-01",
+      "grader_type": "llm_likert",
+      "conversation": [
+        "This is the SECOND time my book hasn't shown up and honestly I'm sick of dealing with this."
+      ],
+      "final_response": "I'm really sorry to hear about the trouble you've been having with your orders, and I understand how frustrating this must be for you. I'd like to help resolve this issue as quickly as possible. Before we start, can I please get your order number so I can take a closer look into this?",
+      "checks": [],
+      "latency_seconds": 3.157
+    }
+  ],
+  "blocked": [
+    {
+      "case_id": "J1-02",
+      "tools_needed": [
+        "get_order"
+      ]
+    },
+    {
+      "case_id": "J1-05",
+      "tools_needed": [
+        "get_order"
+      ]
+    },
+    {
+      "case_id": "J1-06",
+      "tools_needed": [
+        "get_order",
+        "send_express_replacement"
+      ]
+    },
+    {
+      "case_id": "J1-07",
+      "tools_needed": [
+        "get_order"
+      ]
+    },
+    {
+      "case_id": "J1-08",
+      "tools_needed": [
+        "get_order"
+      ]
+    },
+    {
+      "case_id": "J1-09",
+      "tools_needed": [
+        "send_express_replacement"
+      ]
+    },
+    {
+      "case_id": "J1-10",
+      "tools_needed": [
+        "get_order"
+      ]
+    },
+    {
+      "case_id": "J2-01",
+      "tools_needed": [
+        "get_order",
+        "issue_refund"
+      ]
+    },
+    {
+      "case_id": "J2-02",
+      "tools_needed": [
+        "escalate_case",
+        "get_order"
+      ]
+    },
+    {
+      "case_id": "J2-03",
+      "tools_needed": [
+        "differs per run \u2014 see J2-01 / J2-02"
+      ]
+    },
+    {
+      "case_id": "J2-04",
+      "tools_needed": [
+        "get_order",
+        "issue_refund"
+      ]
+    },
+    {
+      "case_id": "J2-05",
+      "tools_needed": [
+        "get_order"
+      ]
+    },
+    {
+      "case_id": "J2-06",
+      "tools_needed": [
+        "get_order"
+      ]
+    },
+    {
+      "case_id": "J2-07",
+      "tools_needed": [
+        "issue_refund"
+      ]
+    },
+    {
+      "case_id": "J2-08",
+      "tools_needed": [
+        "issue_refund"
+      ]
+    }
+  ],
+  "note": "token usage not recorded \u2014 not exposed by this SDK version's RunResult"
+}

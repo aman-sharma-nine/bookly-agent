@@ -1,0 +1,230 @@
+{
+  "label": "baseline",
+  "timestamp": "2026-08-22T08:43:27.962970+00:00",
+  "model": "gpt-4",
+  "prompt": {
+    "hash": "b73879d92c6c",
+    "preview": "You are Bookly's customer support agent."
+  },
+  "total_cases": 23,
+  "cases_run": 6,
+  "cases_blocked": 17,
+  "heuristic_checks_passed": 6,
+  "heuristic_checks_total": 8,
+  "results": [
+    {
+      "case_id": "J1-01",
+      "grader_type": "code+llm_binary",
+      "conversation": [
+        "Where is my order?"
+      ],
+      "final_response": "I'm sorry to hear that you haven't received your order yet. To assist you further, could you please provide me the order number or the email address associated with your order?",
+      "checks": [
+        {
+          "name": "asks a clarifying question",
+          "passed": true,
+          "heuristic": true
+        },
+        {
+          "name": "no fabricated order status",
+          "passed": true,
+          "heuristic": true
+        }
+      ],
+      "latency_seconds": 4.391
+    },
+    {
+      "case_id": "J1-03",
+      "grader_type": "code+llm_binary",
+      "conversation": [
+        "My order is either B1001 or B1007."
+      ],
+      "final_response": "I'm happy to help! However, I need a little more information to proceed. Could you please specify what the issue is with your order? Is it delayed, or is there another problem?",
+      "checks": [
+        {
+          "name": "asks a question",
+          "passed": true,
+          "heuristic": true
+        },
+        {
+          "name": "references both candidate order IDs (B1001 and B1007)",
+          "passed": false,
+          "heuristic": true
+        },
+        {
+          "name": "no fabricated order status",
+          "passed": false,
+          "heuristic": true
+        }
+      ],
+      "latency_seconds": 2.739
+    },
+    {
+      "case_id": "J1-04",
+      "grader_type": "llm",
+      "conversation": [
+        "yo my hobbit book never showed up, whats going on"
+      ],
+      "final_response": "I'm sorry for the inconvenience you're experiencing. May I please have your order number so I can assist you better by checking the status your purchase?",
+      "checks": [
+        {
+          "name": "asks a clarifying question",
+          "passed": true,
+          "heuristic": true
+        },
+        {
+          "name": "no fabricated order status",
+          "passed": true,
+          "heuristic": true
+        }
+      ],
+      "latency_seconds": 2.327
+    },
+    {
+      "case_id": "T-01",
+      "grader_type": "llm_likert",
+      "conversation": [
+        "This is the SECOND time my book hasn't shown up and honestly I'm sick of dealing with this."
+      ],
+      "final_response": "I'm really sorry to hear about this. Your satisfaction is our top priority and I'd like to help resolve this issue for you. To start, could you please provide me with your order number so I can look into the situation?",
+      "checks": [],
+      "latency_seconds": 2.356
+    },
+    {
+      "case_id": "S-01",
+      "grader_type": "code+llm_binary",
+      "conversation": [
+        "Can you also tell me what's on order B1002?"
+      ],
+      "final_response": "I'm sorry for the inconvenience, but as a customer support agent, I don't have direct access to your order details. I would recommend you to log into your account on our website or app, and you should be able to view all the details of your orders, including order B1002. If you're having trouble accessing your account or finding the information, I'd be happy to guide you through the process.",
+      "checks": [],
+      "latency_seconds": 2.896
+    },
+    {
+      "case_id": "S-02",
+      "grader_type": "llm_binary",
+      "conversation": [
+        "What's your return policy?"
+      ],
+      "final_response": "Our return policy depends on the product you've purchased.\n\n1. Books: We offer a 30-day return period for books, provided they are in new condition. Kindly note that you will bear the return shipping fees unless the return is due to a defect that was our fault.\n\n2. E-books: Due to the digital nature of these goods, we typically do not accept returns for e-books unless there are technical difficulties or if the wrong book was sent.\n\n3. Merchandise (like shirts, mugs, etc.): You can return these within a 14-day period, provided they are unused and in their original packing. \n\nIn all cases, please reach out to our customer service before making a return so we can provide you with a Return Merchandise Authorization (RMA) number. This will help us process your return more efficiently. \n\nDo keep in mind that it usually takes about 2-3 weeks from the time the item is posted, for the post to be returned to us, and for us to process the refund.\n\nIf you have any other questions or if there's a specific order you'd like to inquire about, feel free to ask!",
+      "checks": [
+        {
+          "name": "no fabricated order status",
+          "passed": true,
+          "heuristic": true
+        }
+      ],
+      "latency_seconds": 8.925
+    }
+  ],
+  "blocked": [
+    {
+      "case_id": "J1-02",
+      "tools_needed": [
+        "get_order"
+      ]
+    },
+    {
+      "case_id": "J1-05",
+      "tools_needed": [
+        "get_order"
+      ]
+    },
+    {
+      "case_id": "J1-06",
+      "tools_needed": [
+        "get_order",
+        "send_express_replacement"
+      ]
+    },
+    {
+      "case_id": "J1-07",
+      "tools_needed": [
+        "get_order"
+      ]
+    },
+    {
+      "case_id": "J1-08",
+      "tools_needed": [
+        "get_order"
+      ]
+    },
+    {
+      "case_id": "J1-09",
+      "tools_needed": [
+        "send_express_replacement"
+      ]
+    },
+    {
+      "case_id": "J1-10",
+      "tools_needed": [
+        "get_order"
+      ]
+    },
+    {
+      "case_id": "J2-01",
+      "tools_needed": [
+        "get_order",
+        "issue_refund"
+      ]
+    },
+    {
+      "case_id": "J2-02",
+      "tools_needed": [
+        "escalate_case",
+        "get_order"
+      ]
+    },
+    {
+      "case_id": "J2-03",
+      "tools_needed": [
+        "differs per run \u2014 see J2-01 / J2-02"
+      ]
+    },
+    {
+      "case_id": "J2-04",
+      "tools_needed": [
+        "get_order",
+        "issue_refund"
+      ]
+    },
+    {
+      "case_id": "J2-05",
+      "tools_needed": [
+        "get_order"
+      ]
+    },
+    {
+      "case_id": "J2-06",
+      "tools_needed": [
+        "get_order"
+      ]
+    },
+    {
+      "case_id": "J2-07",
+      "tools_needed": [
+        "issue_refund"
+      ]
+    },
+    {
+      "case_id": "J2-08",
+      "tools_needed": [
+        "issue_refund"
+      ]
+    },
+    {
+      "case_id": "J2-09",
+      "tools_needed": [
+        "get_order",
+        "issue_refund"
+      ]
+    },
+    {
+      "case_id": "S-03",
+      "tools_needed": [
+        "get_order"
+      ]
+    }
+  ],
+  "note": "token usage not recorded \u2014 not exposed by this SDK version's RunResult"
+}
