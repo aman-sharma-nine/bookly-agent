@@ -2,6 +2,7 @@
 .venv/
 __pycache__/
 *.pyc
+.pytest_cache/
 evals/results/
 LEARNING_JOURNAL.md
 .DS_Store
