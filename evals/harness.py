@@ -1,21 +1,3 @@
-"""Evaluation-only harness — wrapped tools, context injection, and
-trace capture. Nothing here is imported by agent.py, tools.py, or prompts.py;
-production code is untouched by this file's existence.
-
-Why wrappers exist at all: three dev cases (J1-08, J1-09, J2-07) need the
-agent to see a scenario tools.py's real functions can't currently produce on
-demand (an order where replacement is unavailable when it normally wouldn't
-be, or a service call that fails). Rather than adding eval-only branches to
-production tools.py (explicitly out of scope — see tools.py's own "known
-gaps" list), this module builds a *separate* Agent object per case, reusing
-the exact same production `agent` (model, instructions) but swapping in a
-wrapped tool function where a case's `available_context["override"]` calls
-for one. Every wrapper preserves the original tool's name and calls the real
-underlying function for everything except the one overridden field/result —
-so the agent still sees the same tool name and schema it would in
-production, it just gets a controlled answer for this one case.
-"""
-
 import json
 import re
 

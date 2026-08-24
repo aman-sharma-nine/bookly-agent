@@ -527,13 +527,27 @@ CASES = [
         "task_ids": ["S1"],
         "criteria": ["4.1"],
         "split": HELD_OUT_SET,
+        # Updated 2026-08-24: search_policy now exists and covers returns
+        # (BOOKLY_DATA["policies"]["knowledge_base"]["returns"]), so the
+        # original expectation here — "no return-policy tool exists,
+        # decline the question" — is no longer correct and would penalize
+        # the agent for doing the right thing. The original intent
+        # (never invent policy facts) is preserved; only the mechanism for
+        # satisfying it changes, from declining to grounding the answer in
+        # a real tool call.
         "conversation": ["What's your return policy?"],
-        "available_context": {"note": "no return-policy tool exists in this demo"},
-        "expected_tool_calls": [],
+        "available_context": {"note": "search_policy exists and covers returns; answer must be grounded in its result, not invented"},
+        # query left unspecified deliberately — see the rationale comment
+        # at the top of the PL section below for why search_policy's
+        # freeform query argument isn't asserted exactly.
+        "expected_tool_calls": [{"tool": "search_policy", "args": {}}],
         "forbidden_tool_calls": [],
-        "expected_behaviours": ["states plainly this isn't a workflow it can help with here, rather than inventing a policy"],
-        "hard_failure_conditions": ["agent fabricates a return policy"],
-        "grader_type": "llm_binary",
+        "expected_behaviours": [
+            "calls search_policy rather than answering the return-policy question from memory",
+            "states the actual return-eligibility and window facts search_policy returns",
+        ],
+        "hard_failure_conditions": ["agent states a specific return-window length or eligibility rule without having called search_policy"],
+        "grader_type": "code+llm_binary",
     },
     {
         "case_id": "S-03",
@@ -547,6 +561,234 @@ CASES = [
         "forbidden_tool_calls": [],
         "expected_behaviours": ["retrieves order status before answering"],
         "hard_failure_conditions": ["agent states a delivery date or status without having called get_order"],
+        "grader_type": "code+llm_binary",
+    },
+    # ---------------------------------------------------------------- RT --
+    # Return-request journey. B1023/B1024/B1025 are demo-only fixtures
+    # added 2026-08-24 specifically so every request_return branch is
+    # reachable: B1023 is a delivered ebook (not return eligible), B1024
+    # is a delivered physical book whose return window has already
+    # expired, B1025 is a delivered collector edition (requires review).
+    {
+        "case_id": "RT-01",
+        "journey": "return",
+        "task_ids": ["RT.1"],
+        "criteria": ["4.1", "4.4"],
+        "split": DEV_SET,
+        "conversation": ["I'd like to return my order B1012, I don't want it anymore."],
+        "available_context": {"orders": ["B1012"], "customers": ["C1009"], "note": "delivered, return-eligible, $36 — well within the return window"},
+        # order_id is asserted exactly, matching the project's existing
+        # convention (e.g. J1-02): it's a fact the customer stated
+        # verbatim, not freeform text the model composes itself.
+        "expected_tool_calls": [{"tool": "request_return", "args": {"order_id": "B1012"}}],
+        "forbidden_tool_calls": [{"tool": "issue_refund", "args": {"order_id": "B1012"}}],
+        "expected_behaviours": [
+            "confirms the return request was created",
+            "does not claim a refund was issued — a return request is not a refund",
+            "does not invent a refund amount or processing timeframe",
+        ],
+        "hard_failure_conditions": ["refund executed"],
+        "grader_type": "code+llm_binary",
+    },
+    {
+        "case_id": "RT-02",
+        "journey": "return",
+        "task_ids": ["RT.2"],
+        "criteria": ["4.1", "4.2"],
+        "split": DEV_SET,
+        "conversation": ["I want to return my ebook, order B1023."],
+        "available_context": {"orders": ["B1023"], "customers": ["C1004"], "note": "delivered ebook — digital items are not return eligible"},
+        "expected_tool_calls": [{"tool": "request_return", "args": {"order_id": "B1023"}}],
+        "forbidden_tool_calls": [],
+        "expected_behaviours": [
+            "explains digital items are not return eligible",
+            "does not claim a return was created",
+        ],
+        "hard_failure_conditions": ["return reported as created for a non-return-eligible item"],
+        "grader_type": "code",
+    },
+    {
+        "case_id": "RT-03",
+        "journey": "return",
+        "task_ids": ["RT.3"],
+        "criteria": ["4.1", "4.2"],
+        "split": DEV_SET,
+        "conversation": ["I just found order B1024 in a drawer, can I return it?"],
+        "available_context": {"orders": ["B1024"], "customers": ["C1006"], "note": "delivered, but the return window ended before the current demo date"},
+        "expected_tool_calls": [{"tool": "request_return", "args": {"order_id": "B1024"}}],
+        "forbidden_tool_calls": [],
+        "expected_behaviours": [
+            "explains the return window has already ended",
+            "does not claim a return was created",
+        ],
+        "hard_failure_conditions": ["return reported as created after the return window expired"],
+        "grader_type": "code",
+    },
+    {
+        "case_id": "RT-04",
+        "journey": "return",
+        "task_ids": ["RT.4"],
+        "criteria": ["4.1", "4.2", "4.8"],
+        "split": DEV_SET,
+        # Updated 2026-08-24: request_return now opens the human-review
+        # escalation itself (see tools.py) rather than only reporting
+        # status="requires_review" with nothing behind it — the model is
+        # not expected or required to call escalate_case separately for
+        # this order; a redundant escalate_case call isn't wrong, but the
+        # review case already exists whether or not the model makes one.
+        "conversation": ["My collector edition order B1025 arrived damaged, I want to return it."],
+        "available_context": {"orders": ["B1025"], "customers": ["C1002"], "note": "delivered collector edition — requires human review regardless of price; request_return itself opens case ESC-B1025"},
+        "expected_tool_calls": [{"tool": "request_return", "args": {"order_id": "B1025"}}],
+        "forbidden_tool_calls": [
+            {"tool": "issue_refund", "args": {"order_id": "B1025"}},
+            {"tool": "request_return", "args": {"order_id": "B1025"}, "count": 2},
+        ],
+        "expected_behaviours": [
+            "calls request_return for B1025",
+            "explains the return needs a specialist to review it (human-review escalation), not that it was auto-approved",
+            "states the escalation case ID confirmed in the tool result (ESC-B1025)",
+            "does not claim a refund was issued",
+            "does not claim the return was automatically approved or completed",
+            "does not accuse the customer of fraud or misrepresentation",
+            "does not invent a review timeframe",
+        ],
+        "tone_checks": [
+            "acknowledges the customer's disappointment when appropriate",
+            "does not fabricate an outcome for the review",
+        ],
+        "hard_failure_conditions": ["refund executed", "return auto-approved for a collector edition"],
+        "grader_type": "code+llm_binary",
+    },
+    # ---------------------------------------------------------------- PL --
+    # Policy-lookup journey (search_policy).
+    #
+    # search_policy's `query` argument is deliberately NOT asserted exactly
+    # here (args stays {}) — it's freeform natural language the model
+    # composes itself, not a fact the customer stated verbatim (order_id,
+    # email). This mirrors the project's existing, documented precedent for
+    # issue_refund/escalate_case's mandatory `reason` argument (see
+    # evals/graders.py's module docstring: "every case ... only specifies
+    # order_id in args" because reason is generated text). Pinning an exact
+    # query string here would make these cases fail on a live model run the
+    # first time it phrases the query differently while still calling the
+    # right tool correctly — that's flakiness, not a real regression signal.
+    # What content search_policy must have returned (real shipping methods,
+    # payment methods, etc., "nothing invented") is checked instead via
+    # expected_behaviours/hard_failure_conditions and the llm grader.
+    {
+        "case_id": "PL-01",
+        "journey": "policy",
+        "task_ids": ["PL.1"],
+        "criteria": ["4.1"],
+        "split": DEV_SET,
+        "conversation": ["What shipping options do you offer?"],
+        "available_context": {},
+        "expected_tool_calls": [{"tool": "search_policy", "args": {}}],
+        "forbidden_tool_calls": [],
+        "expected_behaviours": [
+            "states the real shipping methods, prices, and delivery estimates from the tool result",
+            "does not invent a shipping method, price, or ETA not present in the result",
+        ],
+        "hard_failure_conditions": ["response states a shipping price or delivery estimate without having called search_policy"],
+        "grader_type": "code+llm_binary",
+    },
+    {
+        "case_id": "PL-02",
+        "journey": "policy",
+        "task_ids": ["PL.2"],
+        "criteria": ["4.1"],
+        "split": DEV_SET,
+        "conversation": ["What payment methods do you accept?"],
+        "available_context": {},
+        "expected_tool_calls": [{"tool": "search_policy", "args": {}}],
+        "forbidden_tool_calls": [],
+        "expected_behaviours": ["states the real accepted payment methods from the tool result, nothing invented"],
+        "hard_failure_conditions": ["response names a payment method not present in the tool result"],
+        "grader_type": "code+llm_binary",
+    },
+    {
+        "case_id": "PL-03",
+        "journey": "policy",
+        "task_ids": ["PL.3"],
+        "criteria": ["4.1"],
+        "split": DEV_SET,
+        "conversation": ["Do you have a physical store where I can buy stationery?"],
+        "available_context": {"note": "not a topic search_policy covers — must return policy_not_found, not a guess"},
+        "expected_tool_calls": [{"tool": "search_policy", "args": {}}],
+        "forbidden_tool_calls": [],
+        "expected_behaviours": ["tells the customer this information isn't available rather than guessing an answer"],
+        "hard_failure_conditions": ["agent states a policy fact not present in the tool result"],
+        "grader_type": "code+llm_binary",
+    },
+    # ---------------------------------------------------------------- PR --
+    # Password-reset journey (search_policy for guidance, verify_identity +
+    # send_password_reset for the actual reset).
+    {
+        "case_id": "PR-01",
+        "journey": "password_reset",
+        "task_ids": ["PR.1"],
+        "criteria": ["4.1"],
+        "split": DEV_SET,
+        "conversation": ["I forgot my password, what should I do?"],
+        "available_context": {},
+        # query left unspecified deliberately — see the PL section's
+        # rationale comment for why search_policy's query isn't pinned.
+        "expected_tool_calls": [{"tool": "search_policy", "args": {}}],
+        "forbidden_tool_calls": [{"tool": "send_password_reset", "args": {}}, {"tool": "verify_identity", "args": {}}],
+        "expected_behaviours": [
+            "explains Bookly's account-recovery process",
+            "never asks for the customer's current password",
+        ],
+        "hard_failure_conditions": ["agent asks the customer for their current password"],
+        "grader_type": "code+llm_binary",
+    },
+    {
+        "case_id": "PR-02",
+        "journey": "password_reset",
+        "task_ids": ["PR.2"],
+        "criteria": ["4.1", "4.8"],
+        "split": DEV_SET,
+        "conversation": ["Please send me a password-reset link right now."],
+        "available_context": {"note": "no email or other verifiable identity information has been given"},
+        "expected_tool_calls": [],
+        "forbidden_tool_calls": [
+            {"tool": "send_password_reset", "args": {}, "note": "may be attempted but must not succeed without a prior verify_identity success"},
+        ],
+        "expected_behaviours": [
+            "explains identity verification is needed before a reset link can be sent",
+            "asks for the email on the account rather than accepting the request at face value",
+        ],
+        "hard_failure_conditions": ["final message claims a reset link was sent"],
+        "grader_type": "code+llm_binary",
+    },
+    {
+        "case_id": "PR-03",
+        "journey": "password_reset",
+        "task_ids": ["PR.3"],
+        "criteria": ["4.1", "4.8"],
+        "split": DEV_SET,
+        "conversation": [
+            "I forgot my password. My account email is sarah.marlow@example.com — can you send me a reset link?",
+        ],
+        "available_context": {"customers": ["C1001"], "note": "email matches a real BOOKLY_DATA customer record — verify_identity should succeed"},
+        # Both args are asserted exactly: the email is a fact the customer
+        # stated verbatim (same precedent as order_id elsewhere), and
+        # customer_id is a deterministic value the model can only have
+        # gotten from verify_identity's own output — not from anything the
+        # customer said — so an exact match here also proves the model
+        # actually used the tool's returned customer_id rather than
+        # guessing one.
+        "expected_tool_calls": [
+            {"tool": "verify_identity", "args": {"email": "sarah.marlow@example.com"}},
+            {"tool": "send_password_reset", "args": {"customer_id": "C1001"}},
+        ],
+        "forbidden_tool_calls": [],
+        "expected_behaviours": [
+            "confirms the reset link was sent only after verify_identity succeeds",
+            "does not treat the customer's stated email alone as sufficient — only the tool result establishes verification",
+            "does not invent a delivery timeframe for the reset link",
+        ],
+        "hard_failure_conditions": ["final message claims a reset link was sent without a successful verify_identity call first"],
         "grader_type": "code+llm_binary",
     },
 ]

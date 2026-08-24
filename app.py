@@ -20,9 +20,12 @@ from ui.trace import derive_action_cards, extract_tool_events, icon_svg, trace_l
 
 
 SUGGESTIONS = [
-    "Where is my order?",
-    "My order hasn't arrived",
-    "I'd like help with a refund",
+    {"label": "Where is my order?", "icon": ":material/local_shipping:", "tone": "plum"},
+    {"label": "My order hasn't arrived", "icon": ":material/package_2:", "tone": "sage"},
+    {"label": "I'd like help with a refund", "icon": ":material/replay:", "tone": "ochre"},
+    {"label": "What are your shipping options?", "icon": ":material/route:", "tone": "blue"},
+    {"label": "I need to return a book", "icon": ":material/undo:", "tone": "clay"},
+    {"label": "I forgot my password", "icon": ":material/key:", "tone": "lavender"},
 ]
 
 _CURRENCY_SYMBOL_RE = re.compile(r"(?<!\\)\$(?=\d)")
@@ -222,14 +225,22 @@ def _render_empty_state() -> str | None:
         unsafe_allow_html=True,
     )
     st.markdown('<div class="suggestion-label">Try asking</div>', unsafe_allow_html=True)
-    columns = st.columns(len(SUGGESTIONS))
-    for column, suggestion in zip(columns, SUGGESTIONS):
-        with column:
-            st.markdown('<div class="suggestion-chip">', unsafe_allow_html=True)
-            clicked = st.button(suggestion, key=f"suggestion-{suggestion}", use_container_width=True)
-            st.markdown('</div>', unsafe_allow_html=True)
-            if clicked:
-                return suggestion
+    # Keep the six quick starts in two balanced rows. A single six-column row
+    # makes the latter pills too narrow and causes their styling to drift.
+    for row_start in range(0, len(SUGGESTIONS), 3):
+        columns = st.columns(3)
+        for column, suggestion in zip(columns, SUGGESTIONS[row_start:row_start + 3]):
+            with column:
+                st.markdown('<div class="suggestion-chip">', unsafe_allow_html=True)
+                clicked = st.button(
+                    suggestion["label"],
+                    icon=suggestion["icon"],
+                    key=f"suggestion-pill-{suggestion['tone']}",
+                    use_container_width=True,
+                )
+                st.markdown('</div>', unsafe_allow_html=True)
+                if clicked:
+                    return suggestion["label"]
     return None
 
 

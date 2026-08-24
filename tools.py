@@ -1,64 +1,21 @@
-"""External-data lookup and simulated actions the agent can call.
-
-Each function is a plain, directly callable, directly testable Python
-function — the primary name (get_order, send_express_replacement,
-issue_refund, escalate_case) is never itself decorated, so unit tests can
-call it exactly like any other function with no agent runtime involved.
-A separate `*_tool` FunctionTool object is built for each with the
-installed Agents SDK's `function_tool()` (the decorator's underlying
-callable form — see agent-SDK docs: `function_tool(func)` is equivalent
-to `@function_tool` applied to `func`, just without renaming `func`
-itself). These `*_tool` objects are imported and registered on the agent
-in agent.py — this file itself never imports agents.Agent or anything
-from agent.py/prompts.py, so the plain functions above stay directly
-testable with no agent runtime involved.
-
-Deterministic policy decisions (refund_allowed, replacement_allowed) live
-in policies.py and are called before any simulated action here. This file
-never re-implements or second-guesses those decisions.
-
-Mock backend: BOOKLY_DATA (data.py). Every lookup returns a deep copy, so
-nothing a caller does to a returned dict can mutate BOOKLY_DATA itself.
-Simulated actions (replacement/refund/escalation) are tracked in small
-in-memory dicts (`_REPLACEMENTS`, `_REFUNDS`, `_ESCALATIONS`) purely so
-repeated tool calls for the same order are idempotent — this is demo
-state, not a database, and it resets every process restart.
-
-Known gaps, none of which are solved by this file alone:
-
-1. No customer-identity check. get_order takes only an order_id, so
-   nothing here stops one customer's session from looking up another
-   customer's order (S-01 in evals/cases.py tests exactly this). Needs
-   authenticated customer identity threaded through — e.g. via
-   RunContextWrapper, hidden from the model, checked against order
-   ownership inside get_order. This needs a minimal session-customer
-   context and an ownership check in all four tools, not a real login
-   system.
-2. No per-run data overrides. J1-08 needs express_replacement_available
-   forced to False; J1-09 and J2-07 need send_express_replacement/
-   issue_refund to simulate a service failure. These tools always read
-   live BOOKLY_DATA and always succeed/fail based on real policy — there
-   is no injection point for a case-specific override yet. Needs an
-   injected per-run context or mock backend for evals to exercise
-   tool-dependent cases.
-3. No per-case action-state isolation in the eval runner.
-   _REPLACEMENTS/_REFUNDS/_ESCALATIONS persist for the process lifetime,
-   so one eval case's successful action would leak into a later case for
-   the same order_id. reset_state() below clears them on demand and is
-   used manually before live smoke checks, but evals/run_evals.py does
-   not call it automatically before each case yet.
-"""
-
 import copy
+from datetime import date
 
 from agents import function_tool
 
+import messages
 from data import BOOKLY_DATA
 from policies import refund_allowed, replacement_allowed
 
 _REPLACEMENTS: dict[str, dict] = {}
 _REFUNDS: dict[str, dict] = {}
 _ESCALATIONS: dict[str, dict] = {}
+_RETURNS: dict[str, dict] = {}
+# Populated only by verify_identity() below, never by send_password_reset's
+# caller directly — this is what keeps password-reset enforcement in code
+# rather than in the model's own say-so. See send_password_reset's
+# docstring for why this exists.
+_VERIFIED_IDENTITIES: set[str] = set()
 
 
 def reset_state() -> None:
@@ -82,6 +39,8 @@ def reset_state() -> None:
     _REPLACEMENTS.clear()
     _REFUNDS.clear()
     _ESCALATIONS.clear()
+    _RETURNS.clear()
+    _VERIFIED_IDENTITIES.clear()
 
 
 def _normalize_order_id(order_id: str) -> str:
@@ -128,15 +87,15 @@ def get_order(order_id: str) -> dict:
     normalized_id = _normalize_order_id(order_id)
     order = _lookup_order(normalized_id)
     if order is None:
-        return {"success": False, "order_id": normalized_id, "reason": "order_not_found"}
+        return messages.build_result("get_order", {"success": False, "order_id": normalized_id, "reason": "order_not_found"})
 
     book = _lookup_book(order["book_id"])
     if book is None:
-        return {"success": False, "order_id": normalized_id, "reason": "book_record_missing"}
+        return messages.build_result("get_order", {"success": False, "order_id": normalized_id, "reason": "book_record_missing"})
 
     customer = BOOKLY_DATA["customers"].get(order["customer_id"], {})
 
-    return {
+    return messages.build_result("get_order", {
         "success": True,
         "order_id": normalized_id,
         "reason": None,
@@ -154,7 +113,7 @@ def get_order(order_id: str) -> dict:
         "express_replacement_available": order["express_replacement_available"],
         "express_replacement_eta": order["express_replacement_eta"],
         "issue_tags": order["issue_tags"],
-    }
+    })
 
 
 def send_express_replacement(order_id: str) -> dict:
@@ -192,24 +151,24 @@ def send_express_replacement(order_id: str) -> dict:
 
     order = _lookup_order(normalized_id)
     if order is None:
-        return {"success": False, "order_id": normalized_id, "reason": "order_not_found"}
+        return messages.build_result("send_express_replacement", {"success": False, "order_id": normalized_id, "reason": "order_not_found"})
 
     book = _lookup_book(order["book_id"])
     if book is None:
-        return {"success": False, "order_id": normalized_id, "reason": "book_record_missing"}
+        return messages.build_result("send_express_replacement", {"success": False, "order_id": normalized_id, "reason": "book_record_missing"})
 
     allowed, reason = replacement_allowed(order, book)
     if not allowed:
-        return {"success": False, "order_id": normalized_id, "reason": reason}
+        return messages.build_result("send_express_replacement", {"success": False, "order_id": normalized_id, "reason": reason})
 
-    result = {
+    result = messages.build_result("send_express_replacement", {
         "success": True,
         "order_id": normalized_id,
         "reason": None,
         "replacement_id": f"RPL-{normalized_id}",
         "eta": order["express_replacement_eta"],
         "status": "scheduled",
-    }
+    })
     _REPLACEMENTS[normalized_id] = result
     return dict(result)
 
@@ -245,34 +204,39 @@ def issue_refund(order_id: str, reason: str) -> dict:
     normalized_id = _normalize_order_id(order_id)
 
     if not reason or not reason.strip():
-        return {"success": False, "order_id": normalized_id, "reason": "reason_required", "status": "rejected"}
+        return messages.build_result("issue_refund", {"success": False, "order_id": normalized_id, "reason": "reason_required", "status": "rejected"})
 
     if normalized_id in _REFUNDS:
         return dict(_REFUNDS[normalized_id])
 
     order = _lookup_order(normalized_id)
     if order is None:
-        return {"success": False, "order_id": normalized_id, "reason": "order_not_found", "status": "rejected"}
+        return messages.build_result("issue_refund", {"success": False, "order_id": normalized_id, "reason": "order_not_found", "status": "rejected"})
 
     book = _lookup_book(order["book_id"])
     if book is None:
-        return {"success": False, "order_id": normalized_id, "reason": "book_record_missing", "status": "rejected"}
+        return messages.build_result("issue_refund", {"success": False, "order_id": normalized_id, "reason": "book_record_missing", "status": "rejected"})
 
     allowed, policy_reason = refund_allowed(order, book)
     if not allowed:
         needs_review = policy_reason in {"exceeds_autonomous_refund_limit", "collector_edition_requires_review"}
         status = "requires_review" if needs_review else "rejected"
-        return {"success": False, "order_id": normalized_id, "reason": policy_reason, "status": status}
+        return messages.build_result("issue_refund", {"success": False, "order_id": normalized_id, "reason": policy_reason, "status": status})
 
-    result = {
-        "success": True,
-        "order_id": normalized_id,
-        "reason": None,
-        "refund_id": f"REF-{normalized_id}",
-        "amount": round(order["unit_price"] * order["quantity"], 2),
-        "currency": order["currency"],
-        "status": "issued",
-    }
+    amount = round(order["unit_price"] * order["quantity"], 2)
+    result = messages.build_result(
+        "issue_refund",
+        {
+            "success": True,
+            "order_id": normalized_id,
+            "reason": None,
+            "refund_id": f"REF-{normalized_id}",
+            "amount": amount,
+            "currency": order["currency"],
+            "status": "issued",
+        },
+        dynamic_message=messages.issue_refund_success_message(amount, order["currency"]),
+    )
     _REFUNDS[normalized_id] = result
     return dict(result)
 
@@ -308,25 +272,196 @@ def escalate_case(order_id: str, reason: str) -> dict:
     normalized_id = _normalize_order_id(order_id)
 
     if not reason or not reason.strip():
-        return {"success": False, "order_id": normalized_id, "reason": "reason_required"}
+        return messages.build_result("escalate_case", {"success": False, "order_id": normalized_id, "reason": "reason_required"})
 
     if normalized_id in _ESCALATIONS:
         return dict(_ESCALATIONS[normalized_id])
 
     order = _lookup_order(normalized_id)
     if order is None:
-        return {"success": False, "order_id": normalized_id, "reason": "order_not_found"}
+        return messages.build_result("escalate_case", {"success": False, "order_id": normalized_id, "reason": "order_not_found"})
 
-    result = {
+    result = messages.build_result("escalate_case", {
         "success": True,
         "order_id": normalized_id,
         "reason": None,
         "case_id": f"ESC-{normalized_id}",
         "status": "pending_human_review",
-        "next_step": "A member of the Bookly support team will review this case.",
-    }
+    })
     _ESCALATIONS[normalized_id] = result
     return dict(result)
+
+
+def request_return(order_id: str, reason: str) -> dict:
+    """Create a demo return request for an eligible delivered order.
+
+    This creates a return request only; it does not issue a refund.
+    High-value and collector-edition cases are routed for review — and
+    "routed" is literal, not just a status string: this function calls
+    escalate_case itself (the same plain function escalate_case_tool
+    wraps) so a real, idempotent human-review case is always opened
+    whenever this returns status="requires_review". The model is never
+    relied on to separately remember to call escalate_case for a return —
+    the review case exists whether or not the model ever mentions it.
+    """
+    normalized_id = _normalize_order_id(order_id)
+    if not reason or not reason.strip():
+        return messages.build_result("request_return", {"success": False, "order_id": normalized_id, "reason": "reason_required", "status": "rejected"})
+    if normalized_id in _RETURNS:
+        return dict(_RETURNS[normalized_id])
+    order = _lookup_order(normalized_id)
+    if order is None:
+        return messages.build_result("request_return", {"success": False, "order_id": normalized_id, "reason": "order_not_found", "status": "rejected"})
+    book = _lookup_book(order["book_id"])
+    if book is None:
+        return messages.build_result("request_return", {"success": False, "order_id": normalized_id, "reason": "book_record_missing", "status": "rejected"})
+    if order.get("refund_amount", 0) > 0 or order.get("fulfillment_status") == "returned":
+        return messages.build_result("request_return", {"success": False, "order_id": normalized_id, "reason": "already_returned_or_refunded", "status": "rejected"})
+    if order.get("fulfillment_status") != "delivered" or not order.get("delivered_date"):
+        return messages.build_result("request_return", {"success": False, "order_id": normalized_id, "reason": "order_not_delivered", "status": "rejected"})
+    if not book.get("return_eligible", False):
+        return messages.build_result("request_return", {"success": False, "order_id": normalized_id, "reason": "item_not_return_eligible", "status": "rejected"})
+    if order.get("return_window_ends") and date.fromisoformat(BOOKLY_DATA["as_of_date"]) > date.fromisoformat(order["return_window_ends"]):
+        return messages.build_result("request_return", {"success": False, "order_id": normalized_id, "reason": "return_window_expired", "status": "rejected"})
+
+    if book.get("is_collector_edition") or order["unit_price"] * order["quantity"] > BOOKLY_DATA["policies"]["autonomous_refund_limit"]:
+        escalation_reason = (
+            "collector edition return requires human review"
+            if book.get("is_collector_edition")
+            else "return value exceeds the autonomous review threshold"
+        )
+        # escalate_case is itself idempotent (keyed by order_id in
+        # _ESCALATIONS), so a repeated request_return call for this same
+        # order_id reuses the exact same case_id rather than opening a
+        # second case — this function never writes its own cache entry
+        # for the requires_review branch, mirroring issue_refund's
+        # convention of not caching denied/review outcomes (see
+        # test_denied_refund_creates_no_cache_entry). next_step is
+        # forwarded verbatim from escalate_case's own centralized
+        # wording (messages.py), not recomposed here.
+        escalation = escalate_case(normalized_id, escalation_reason)
+        return messages.build_result("request_return", {
+            "success": False,
+            "order_id": normalized_id,
+            "reason": "return_requires_review",
+            "status": "requires_review",
+            "return_id": f"RET-{normalized_id}",
+            "case_id": escalation.get("case_id"),
+            "next_step": escalation.get("next_step"),
+        })
+
+    result = messages.build_result("request_return", {
+        "success": True, "order_id": normalized_id, "reason": None,
+        "return_id": f"RET-{normalized_id}", "status": "return_requested",
+        "return_by": order.get("return_window_ends"),
+    })
+    _RETURNS[normalized_id] = result
+    return dict(result)
+
+
+def search_policy(query: str) -> dict:
+    """Search the approved demo knowledge base without guessing."""
+    normalized_query = (query or "").strip().lower()
+    if not normalized_query:
+        return messages.build_result("search_policy", {"success": False, "reason": "query_required", "matches": []})
+    policies = BOOKLY_DATA["policies"]
+    matches = []
+    if any(term in normalized_query for term in ("ship", "shipping", "delivery", "postage")):
+        matches.append({"topic": "shipping", "content": copy.deepcopy(policies["shipping_policy"]), "source": "Bookly shipping policy"})
+    if any(term in normalized_query for term in ("return", "exchange", "send back")):
+        matches.append({"topic": "returns", "content": policies["knowledge_base"]["returns"], "return_window_days": policies["standard_return_days"], "source": "Bookly returns policy"})
+    if any(term in normalized_query for term in ("pay", "payment", "card", "paypal")):
+        matches.append({"topic": "payments", "content": policies["knowledge_base"]["payments"], "source": "Bookly payments policy"})
+    if any(term in normalized_query for term in ("password", "reset", "sign in", "login", "log in")):
+        matches.append({"topic": "password_reset", "content": policies["knowledge_base"]["password_reset"], "source": "Bookly account-recovery policy"})
+    if not matches:
+        return messages.build_result("search_policy", {"success": False, "reason": "policy_not_found", "query": query, "matches": []})
+    return messages.build_result(
+        "search_policy",
+        {"success": True, "reason": None, "query": query, "matches": matches},
+        dynamic_message=messages.search_policy_success_message(matches),
+    )
+
+
+def verify_identity(email: str) -> dict:
+    """Deterministically verify a customer's identity by their account email.
+
+    DEMO-ONLY stand-in for a real identity-verification channel (e.g. an
+    emailed/texted one-time code, or an authenticated logged-in session).
+    This is not production-grade identity verification — it's a simple
+    exact-match lookup against BOOKLY_DATA's customer records, chosen so
+    that "is this customer verified" is a fact this function computes
+    itself, never a claim the model can make on its own. On a match, the
+    resolved customer_id is recorded in _VERIFIED_IDENTITIES so
+    send_password_reset can check it independently — the model cannot
+    fabricate this state by asserting an email or a customer_id; it must
+    supply an email that actually matches a BOOKLY_DATA record.
+
+    Args:
+        email: The email address the customer states is on their Bookly
+            account. Matched case-insensitively after trimming whitespace.
+
+    Returns:
+        A dict with `success`. On success, also includes the resolved
+        `customer_id` and `status="identity_verified"`. On failure,
+        `reason` is `email_required` (blank input) or `identity_not_found`
+        (no matching account) — never an error that leaks which accounts
+        exist beyond a plain match/no-match.
+    """
+    normalized_email = (email or "").strip().lower()
+    if not normalized_email:
+        return messages.build_result("verify_identity", {"success": False, "reason": "email_required"})
+
+    for customer_id, customer in BOOKLY_DATA["customers"].items():
+        if customer.get("email", "").strip().lower() == normalized_email:
+            _VERIFIED_IDENTITIES.add(customer_id)
+            return messages.build_result("verify_identity", {"success": True, "reason": None, "customer_id": customer_id, "status": "identity_verified"})
+
+    return messages.build_result("verify_identity", {"success": False, "reason": "identity_not_found"})
+
+
+def send_password_reset(customer_id: str) -> dict:
+    """Send a reset link only when this customer_id has already been
+    confirmed by a successful verify_identity call in this conversation.
+
+    Unlike the earlier version of this tool, `identity_verified` is not an
+    argument the caller can set — whether this customer is verified is
+    looked up in _VERIFIED_IDENTITIES, a cache this function never writes
+    to itself (only verify_identity does). This closes the gap the CX
+    review flagged: a model can no longer grant itself a "verified"
+    customer merely by asserting a boolean or by treating a conversational
+    identity claim as proof. A conversational claim never reaches this
+    function as anything but a customer_id string; it is only trusted once
+    verify_identity has independently matched it against BOOKLY_DATA.
+
+    Args:
+        customer_id: The Bookly customer ID returned by a prior successful
+            verify_identity call. Matched exactly after trimming whitespace
+            and uppercasing.
+
+    Returns:
+        A dict with `success`. On success, also includes `status`
+        ("reset_link_sent") and a `message` with no invented timing or
+        account details — the message never states how the link was sent
+        or when it will arrive, since BOOKLY_DATA has no such field. On
+        failure (`identity_verification_required`), still returns
+        `success=False` — this tool can never report a reset as sent
+        without a real verify_identity success behind it, regardless of
+        password_reset_requires_identity_verification's on/off value in a
+        given demo configuration.
+    """
+    normalized_id = (customer_id or "").strip().upper()
+    requires_verification = BOOKLY_DATA["policies"]["password_reset_requires_identity_verification"]
+
+    if requires_verification and normalized_id not in _VERIFIED_IDENTITIES:
+        return messages.build_result("send_password_reset", {"success": False, "status": "verification_required", "reason": "identity_verification_required"})
+
+    result = messages.build_result("send_password_reset", {"success": True, "reason": None, "status": "reset_link_sent"})
+    # `message` is kept as a separate field for backward compatibility with
+    # anything already reading it; it is always identical to
+    # customer_message, sourced from the same single string in messages.py.
+    result["message"] = result["customer_message"]
+    return result
 
 
 # FunctionTool objects — registered on the agent in agent.py.
@@ -334,3 +469,7 @@ get_order_tool = function_tool(get_order)
 send_express_replacement_tool = function_tool(send_express_replacement)
 issue_refund_tool = function_tool(issue_refund)
 escalate_case_tool = function_tool(escalate_case)
+request_return_tool = function_tool(request_return)
+search_policy_tool = function_tool(search_policy)
+verify_identity_tool = function_tool(verify_identity)
+send_password_reset_tool = function_tool(send_password_reset)

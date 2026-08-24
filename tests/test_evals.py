@@ -392,10 +392,13 @@ class SplitAndBlockedCaseTests(unittest.TestCase):
         # J2-06 removed (B1002's simplification retired the conflicting-
         # delivery-evidence scenario it tested). J2-10 added (order still
         # in transit must not trigger an autonomous refund or replacement).
+        # RT-01..04/PL-01..03/PR-01..03 added 2026-08-24 to cover the
+        # request_return/search_policy/verify_identity+send_password_reset
+        # tools, all to the dev split.
         self.assertEqual(len(by_split("dev")) + len(by_split("held_out")), len(CASES))
-        self.assertEqual(len(by_split("dev")), 17)
+        self.assertEqual(len(by_split("dev")), 27)
         self.assertEqual(len(by_split("held_out")), 5)
-        self.assertEqual(len(CASES), 22)
+        self.assertEqual(len(CASES), 32)
 
     # 15. Blocked cases are not counted as passing.
     def test_s01_is_registered_as_blocked_not_run(self):

@@ -26,11 +26,15 @@ EXPECTED_TOOL_NAMES = {
     "send_express_replacement",
     "issue_refund",
     "escalate_case",
+    "request_return",
+    "search_policy",
+    "verify_identity",
+    "send_password_reset",
 }
 
 
 class RegisteredToolsTests(unittest.TestCase):
-    def test_exactly_the_four_expected_tools_are_registered(self):
+    def test_expected_tools_are_registered(self):
         names = [t.name for t in agent.tools]
         self.assertEqual(set(names), EXPECTED_TOOL_NAMES)
 
@@ -38,8 +42,8 @@ class RegisteredToolsTests(unittest.TestCase):
         names = [t.name for t in agent.tools]
         self.assertEqual(len(names), len(set(names)), f"duplicate tool registration: {names}")
 
-    def test_no_unexpected_fifth_tool(self):
-        self.assertEqual(len(agent.tools), 4)
+    def test_no_unexpected_tool_is_registered(self):
+        self.assertEqual(len(agent.tools), len(EXPECTED_TOOL_NAMES))
 
 
 class ToolChoiceTests(unittest.TestCase):
@@ -68,6 +72,29 @@ class ToolSchemaTests(unittest.TestCase):
     def test_escalate_case_requires_order_id_and_reason(self):
         required = set(self._schema_for("escalate_case").get("required", []))
         self.assertTrue({"order_id", "reason"}.issubset(required))
+
+    def test_request_return_requires_order_id_and_reason(self):
+        required = set(self._schema_for("request_return").get("required", []))
+        self.assertTrue({"order_id", "reason"}.issubset(required))
+
+    def test_search_policy_requires_query(self):
+        required = set(self._schema_for("search_policy").get("required", []))
+        self.assertIn("query", required)
+
+    def test_verify_identity_requires_email(self):
+        required = set(self._schema_for("verify_identity").get("required", []))
+        self.assertIn("email", required)
+
+    def test_send_password_reset_requires_customer_id_not_a_bare_boolean(self):
+        # Regression test for the CX review's core finding: the tool used
+        # to take a caller-supplied identity_verified boolean, which meant
+        # the model could grant itself "verified" status. It now takes
+        # customer_id and checks tools._VERIFIED_IDENTITIES, a cache only
+        # verify_identity can write to (see tests/test_tools.py).
+        schema = self._schema_for("send_password_reset")
+        required = set(schema.get("required", []))
+        self.assertIn("customer_id", required)
+        self.assertNotIn("identity_verified", schema.get("properties", {}))
 
 
 class ToolDescriptionTests(unittest.TestCase):

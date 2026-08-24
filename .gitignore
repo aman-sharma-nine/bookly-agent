@@ -4,3 +4,5 @@ __pycache__/
 *.pyc
 evals/results/
 LEARNING_JOURNAL.md
+.DS_Store
+deck/

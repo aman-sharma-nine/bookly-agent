@@ -19,6 +19,10 @@ APP_CSS = r"""
   --bookly-ochre-soft: #f1e6d1;
   --bookly-clay: #98645c;
   --bookly-clay-soft: #f2e1de;
+  --bookly-blue: #587477;
+  --bookly-blue-soft: #e1ebeb;
+  --bookly-lavender: #74657b;
+  --bookly-lavender-soft: #ebe5ee;
 }
 
 html, body, [class*="css"] { font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
@@ -60,17 +64,43 @@ section.main > div.block-container {
 .welcome h1 { font: 600 clamp(38px, 5.6vw, 62px)/1.02 "Iowan Old Style", Baskerville, Georgia, serif; letter-spacing: -.045em; margin: 0 0 18px; color: var(--bookly-ink); }
 .welcome p { color: var(--bookly-muted); font-size: 16px; line-height: 1.65; margin: 0 auto; max-width: 450px; }
 
+/* One button language for all custom Streamlit actions. Suggestion chips
+   layer their own muted fills on top of this shared geometry. */
+div[data-testid="stButton"] button {
+  min-height: 40px; padding: 0 16px; border: 1px solid #d2c1b3;
+  border-radius: 999px; background: var(--bookly-surface); color: var(--bookly-plum);
+  font-size: 12px; font-weight: 600; letter-spacing: .005em;
+  box-shadow: 0 2px 0 rgba(86, 60, 75, .04);
+  transition: background .18s ease-out, border-color .18s ease-out, color .18s ease-out, transform .18s ease-out, box-shadow .18s ease-out;
+}
+div[data-testid="stButton"] button:hover {
+  border-color: var(--bookly-plum); background: var(--bookly-plum-soft); color: var(--bookly-plum);
+  box-shadow: 0 4px 10px rgba(86, 60, 75, .09); transform: translateY(-1px);
+}
+div[data-testid="stButton"] button:focus-visible { outline: 3px solid var(--bookly-ochre-soft); outline-offset: 2px; }
+
 .suggestion-label { color: var(--bookly-muted); font-size: 12px; margin: 0 0 10px 2px; text-align: left; }
-div[data-testid="stHorizontalBlock"]:has(.suggestion-chip) { gap: 9px; }
+div[data-testid="stHorizontalBlock"]:has(.suggestion-chip) { gap: 9px; margin-bottom: 9px; }
 div[data-testid="stHorizontalBlock"]:has(.suggestion-chip) [data-testid="stButton"] button {
-  width: 100%; min-height: 44px; border-radius: 999px; border: 1px solid var(--bookly-line);
-  background: var(--bookly-surface); color: var(--bookly-ink); font-size: 13px; font-weight: 500;
+  width: 100%; min-height: 46px; padding: 7px 14px; border-radius: 999px; border: 1px solid var(--bookly-line);
+  background: var(--bookly-surface); color: var(--bookly-ink); font-size: 13px; font-weight: 500; line-height: 1.25;
   transition: all .18s ease-out; box-shadow: none;
 }
-div[data-testid="stHorizontalBlock"]:has(.suggestion-chip) [data-testid="stColumn"]:nth-child(1) [data-testid="stButton"] button { background: var(--bookly-plum-soft); border-color: #d9c3cf; }
-div[data-testid="stHorizontalBlock"]:has(.suggestion-chip) [data-testid="stColumn"]:nth-child(2) [data-testid="stButton"] button { background: var(--bookly-sage-soft); border-color: #c7d8cb; }
-div[data-testid="stHorizontalBlock"]:has(.suggestion-chip) [data-testid="stColumn"]:nth-child(3) [data-testid="stButton"] button { background: var(--bookly-ochre-soft); border-color: #dfcba7; }
-div[data-testid="stHorizontalBlock"]:has(.suggestion-chip) [data-testid="stButton"] button:hover { border-color: var(--bookly-plum); color: var(--bookly-plum); background: var(--bookly-plum-soft); transform: translateY(-1px); }
+/* Each pill is keyed in Streamlit, giving it a stable st-key-* hook. */
+.st-key-suggestion-pill-plum button { background: var(--bookly-plum-soft) !important; border-color: #d9c3cf !important; color: var(--bookly-plum) !important; }
+.st-key-suggestion-pill-sage button { background: var(--bookly-sage-soft) !important; border-color: #c7d8cb !important; color: var(--bookly-sage) !important; }
+.st-key-suggestion-pill-ochre button { background: var(--bookly-ochre-soft) !important; border-color: #dfcba7 !important; color: #946f38 !important; }
+.st-key-suggestion-pill-blue button { background: var(--bookly-blue-soft) !important; border-color: #c5d8d9 !important; color: var(--bookly-blue) !important; }
+.st-key-suggestion-pill-clay button { background: var(--bookly-clay-soft) !important; border-color: #e1c5c0 !important; color: var(--bookly-clay) !important; }
+.st-key-suggestion-pill-lavender button { background: var(--bookly-lavender-soft) !important; border-color: #d5c9da !important; color: var(--bookly-lavender) !important; }
+.st-key-suggestion-pill-plum button:hover,
+.st-key-suggestion-pill-sage button:hover,
+.st-key-suggestion-pill-ochre button:hover,
+.st-key-suggestion-pill-blue button:hover,
+.st-key-suggestion-pill-clay button:hover,
+.st-key-suggestion-pill-lavender button:hover {
+  transform: translateY(-1px); box-shadow: 0 4px 10px rgba(86, 60, 75, .08);
+}
 
 [data-testid="stChatMessage"] { padding: 13px 0; gap: 13px; }
 [data-testid="stChatMessage"] [data-testid="stChatMessageAvatarUser"] { background: var(--bookly-sand); color: var(--bookly-muted); }
@@ -129,10 +159,11 @@ div[data-testid="stExpander"] summary p { color: var(--bookly-muted); font-size:
 .demo-order span { display: block; color: var(--bookly-muted); font-size: 12px; line-height: 1.45; }
 .demo-note { color: var(--bookly-muted); font-size: 11px; line-height: 1.5; margin-top: 28px; }
 
-button[kind="secondary"] { border-color: #c7b5a8; color: var(--bookly-plum); background: var(--bookly-surface); border-radius: 10px; }
-button[kind="secondary"]:hover { border-color: var(--bookly-plum); background: var(--bookly-plum-soft); color: var(--bookly-plum); }
 div[data-testid="stHorizontalBlock"]:has(.bookly-header-brand) [data-testid="stButton"] button {
-  min-height: 38px; font-size: 12px; white-space: nowrap;
+  min-height: 38px; font-size: 12px; white-space: nowrap; background: var(--bookly-plum-soft); border-color: #d9c3cf;
+}
+section[data-testid="stSidebar"] [data-testid="stButton"] button {
+  background: var(--bookly-surface); border-color: #c7d8cb; color: var(--bookly-sage);
 }
 
 @media (max-width: 680px) {
@@ -143,7 +174,7 @@ div[data-testid="stHorizontalBlock"]:has(.bookly-header-brand) [data-testid="stB
   .welcome { margin-bottom: 34px; }
   .welcome h1 { font-size: 42px; }
   [data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) { margin-left: 3%; }
-  div[data-testid="stHorizontalBlock"]:has(.suggestion-chip) [data-testid="stButton"] button { font-size: 12px; padding: 0 7px; }
+  div[data-testid="stHorizontalBlock"]:has(.suggestion-chip) [data-testid="stButton"] button { min-height: 48px; font-size: 12px; padding: 7px 8px; white-space: normal; }
   div[data-testid="stHorizontalBlock"]:has(.bookly-header-brand) [data-testid="stButton"] button { font-size: 11px; padding: 0 5px; }
 }
 @media (prefers-reduced-motion: reduce) {

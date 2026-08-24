@@ -12,9 +12,16 @@ import json
 import re
 from typing import Any
 
+from messages import format_money as _money
 
-ACTION_TOOLS = {"issue_refund", "send_express_replacement", "escalate_case"}
-KNOWN_TOOLS = {"get_order", *ACTION_TOOLS}
+
+ACTION_TOOLS = {"issue_refund", "send_express_replacement", "escalate_case", "request_return", "verify_identity", "send_password_reset"}
+# search_policy is a lookup, not an action — it never changes customer or
+# order state, so it stays out of ACTION_TOOLS (no action card), but it
+# still needs to be a *known* tool so its calls survive extract_tool_events
+# and show up in the collapsed "View agent activity" trace.
+LOOKUP_TOOLS = {"get_order", "search_policy"}
+KNOWN_TOOLS = {*LOOKUP_TOOLS, *ACTION_TOOLS}
 _ORDER_ID_RE = re.compile(r"^[A-Z0-9-]{1,32}$")
 
 _ICON_SVGS = {
@@ -70,55 +77,49 @@ def _safe_arguments(raw_arguments: Any) -> dict[str, str]:
     return safe
 
 
-def _money(amount: Any, currency: Any = "AUD") -> str:
-    try:
-        value = float(amount)
-    except (TypeError, ValueError):
-        return ""
-    symbols = {"USD": "$", "AUD": "A$", "CAD": "CA$", "GBP": "£", "EUR": "€"}
-    code = str(currency or "AUD").upper()
-    prefix = symbols.get(code, f"{code} ")
-    return f"{prefix}{value:,.2f}"
-
-
 def _reason_text(reason: Any) -> str:
     return str(reason or "").strip().lower()
+
+
+def _card_body(output: dict[str, Any], default: str) -> str:
+    """Prefer the centralized customer_message (see messages.py) for a
+    failure/review card's body; fall back to `default` only if a result
+    somehow has none (hand-built fixtures, or a tool not yet wired in)."""
+    message = output.get("customer_message")
+    return message if isinstance(message, str) and message.strip() else default
+
+
+def _success_card_body(output: dict[str, Any], default: str) -> str:
+    """For a success card, `next_step` ("what happens next") is more
+    useful than repeating customer_message ("what happened"), since the
+    card's title already announces success — but fall back to
+    customer_message, then `default`, if no next_step exists for this
+    outcome."""
+    next_step = output.get("next_step")
+    if isinstance(next_step, str) and next_step.strip():
+        return next_step
+    message = output.get("customer_message")
+    return message if isinstance(message, str) and message.strip() else default
 
 
 def _summary(tool: str, output: dict[str, Any] | None, arguments: dict[str, str]) -> str:
     if output is None:
         return "No result was returned"
 
+    # customer_message (see messages.py) is the single centralized source
+    # for what happened, in neutral customer-safe language — the trace
+    # reuses it directly instead of composing its own separate wording, so
+    # the collapsed activity trace and the agent's actual reply can never
+    # drift into saying different things about the same tool result.
+    customer_message = output.get("customer_message")
+    if isinstance(customer_message, str) and customer_message.strip():
+        return customer_message
+
+    # Fallback only for a result that somehow has no customer_message
+    # (e.g. hand-built test fixtures, or a future tool not yet wired into
+    # messages.py) — never raw internal reason codes.
     success = bool(output.get("success"))
-    order_id = output.get("order_id") or arguments.get("order_id") or "the order"
-    reason = _reason_text(output.get("reason"))
-
-    if tool == "get_order":
-        return f"Order {order_id} checked" if success else "Order could not be found"
-
-    if tool == "issue_refund":
-        if success:
-            amount = _money(output.get("amount"), output.get("currency"))
-            return f"Refund of {amount} confirmed" if amount else "Refund confirmed"
-        if output.get("status") == "requires_review" or reason in {
-            "collector_edition_requires_review",
-            "exceeds_autonomous_refund_limit",
-        }:
-            return "Refund requires human review"
-        return "Refund was not completed"
-
-    if tool == "send_express_replacement":
-        if success:
-            eta = output.get("eta")
-            return f"Express replacement arranged · Expected {eta}" if eta else "Express replacement arranged"
-        if reason in {"express_replacement_unavailable", "collector_edition_requires_review"}:
-            return "Replacement unavailable"
-        return "Replacement was not completed"
-
-    if tool == "escalate_case":
-        return "Case sent for human review" if success else "Case was not sent for review"
-
-    return "Tool completed" if success else "Tool did not complete"
+    return f"{tool} completed" if success else f"{tool} did not complete"
 
 
 def _event_for_call(call: dict[str, Any], output: dict[str, Any] | None) -> dict[str, Any]:
@@ -175,7 +176,15 @@ def _failure_card(event: dict[str, Any]) -> dict[str, Any]:
             "state": "review",
             "icon": "person_search",
             "title": "Refund requires review",
-            "body": "This order needs a specialist to approve the refund.",
+            "body": _card_body(output, "This order needs a specialist to approve the refund."),
+        }
+
+    if tool == "request_return" and output.get("status") == "requires_review":
+        return {
+            "state": "review",
+            "icon": "person_search",
+            "title": "Return requires review",
+            "body": _card_body(output, "This return needs a specialist to approve it."),
         }
 
     if tool == "send_express_replacement" and reason in {
@@ -186,14 +195,30 @@ def _failure_card(event: dict[str, Any]) -> dict[str, Any]:
             "state": "blocked",
             "icon": "package_2",
             "title": "Replacement unavailable",
-            "body": "We weren’t able to arrange the replacement through the current service.",
+            "body": _card_body(output, "We weren’t able to arrange the replacement through the current service."),
+        }
+
+    if tool == "verify_identity":
+        return {
+            "state": "blocked",
+            "icon": "person_search",
+            "title": "Identity not verified",
+            "body": _card_body(output, "We couldn’t confirm the account from that information."),
+        }
+
+    if tool == "send_password_reset" and reason == "identity_verification_required":
+        return {
+            "state": "blocked",
+            "icon": "person_search",
+            "title": "Verification required",
+            "body": _card_body(output, "We need to verify the account before a reset link can be sent."),
         }
 
     return {
         "state": "failed",
         "icon": "error_outline",
         "title": "Unable to complete the action",
-        "body": "The action could not be completed. Please try again or continue with the next available support option.",
+        "body": _card_body(output, "The action could not be completed. Please try again or continue with the next available support option."),
     }
 
 
@@ -214,23 +239,45 @@ def derive_action_cards(events: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 "state": "success",
                 "icon": "replay",
                 "title": "Refund processed",
-                "body": "Original payment method",
+                "body": _success_card_body(output, "Original payment method"),
                 "value": _money(output.get("amount"), output.get("currency")),
             })
         elif tool == "send_express_replacement":
             eta = output.get("eta")
+            default_body = f"Express delivery · Expected {eta}" if eta else "Express delivery"
             cards.append({
                 "state": "success",
                 "icon": "local_shipping",
                 "title": "Replacement arranged",
-                "body": f"Express delivery · Expected {eta}" if eta else "Express delivery",
+                "body": _success_card_body(output, default_body),
             })
         elif tool == "escalate_case":
             cards.append({
                 "state": "success",
                 "icon": "support_agent",
                 "title": "Case sent for review",
-                "body": output.get("next_step") or "A Bookly specialist will review this order.",
+                "body": _success_card_body(output, "A Bookly specialist will review this order."),
+            })
+        elif tool == "request_return":
+            cards.append({
+                "state": "success",
+                "icon": "replay",
+                "title": "Return request created",
+                "body": _success_card_body(output, "Return instructions will be provided."),
+            })
+        elif tool == "verify_identity":
+            cards.append({
+                "state": "success",
+                "icon": "person_search",
+                "title": "Identity verified",
+                "body": _success_card_body(output, "Confirmed using the account details provided."),
+            })
+        elif tool == "send_password_reset":
+            cards.append({
+                "state": "success",
+                "icon": "support_agent",
+                "title": "Reset link sent",
+                "body": _success_card_body(output, "Use the link from Bookly to recover access."),
             })
     return cards
 

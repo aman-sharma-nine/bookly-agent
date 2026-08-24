@@ -8,7 +8,11 @@ from tools import (
     escalate_case_tool,
     get_order_tool,
     issue_refund_tool,
+    request_return_tool,
+    search_policy_tool,
+    send_password_reset_tool,
     send_express_replacement_tool,
+    verify_identity_tool,
 )
 
 
@@ -23,6 +27,10 @@ agent = Agent(
         send_express_replacement_tool,
         issue_refund_tool,
         escalate_case_tool,
+        request_return_tool,
+        search_policy_tool,
+        verify_identity_tool,
+        send_password_reset_tool,
     ],
     model_settings=ModelSettings(
     tool_choice="auto",
@@ -86,5 +94,4 @@ async def main() -> None:
 
 if __name__ == "__main__":
     asyncio.run(main())
-
 

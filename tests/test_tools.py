@@ -19,6 +19,8 @@ class ToolTestCase(unittest.TestCase):
         tools._REPLACEMENTS.clear()
         tools._REFUNDS.clear()
         tools._ESCALATIONS.clear()
+        tools._RETURNS.clear()
+        tools._VERIFIED_IDENTITIES.clear()
 
 
 class GetOrderTests(ToolTestCase):
@@ -233,20 +235,203 @@ class EscalateCaseTests(ToolTestCase):
             self.assertNotIn(phrase, next_step)
 
 
+class RequestReturnTests(ToolTestCase):
+    def test_successful_return_for_delivered_eligible_low_value_book(self):
+        result = tools.request_return("B1012", "book is no longer needed")
+        self.assertTrue(result["success"])
+        self.assertEqual(result["status"], "return_requested")
+        self.assertEqual(result["return_id"], "RET-B1012")
+        self.assertIn("return_by", result)
+
+    def test_idempotent_repeated_call_same_return_id(self):
+        first = tools.request_return("B1012", "book is no longer needed")
+        second = tools.request_return("B1012", "asking again")
+        self.assertEqual(first["return_id"], second["return_id"])
+
+    def test_rejects_undelivered_order(self):
+        result = tools.request_return("B1001", "book is no longer needed")
+        self.assertFalse(result["success"])
+        self.assertEqual(result["reason"], "order_not_delivered")
+        self.assertEqual(result["status"], "rejected")
+
+    def test_rejects_delivered_ebook_as_not_return_eligible(self):
+        result = tools.request_return("B1023", "changed my mind")
+        self.assertFalse(result["success"])
+        self.assertEqual(result["reason"], "item_not_return_eligible")
+        self.assertEqual(result["status"], "rejected")
+
+    def test_rejects_delivered_order_past_the_return_window(self):
+        result = tools.request_return("B1024", "found it in a drawer")
+        self.assertFalse(result["success"])
+        self.assertEqual(result["reason"], "return_window_expired")
+        self.assertEqual(result["status"], "rejected")
+
+    def test_collector_edition_return_creates_a_human_review_case(self):
+        result = tools.request_return("B1025", "arrived damaged")
+        self.assertFalse(result["success"])
+        self.assertEqual(result["reason"], "return_requires_review")
+        self.assertEqual(result["status"], "requires_review")
+        self.assertEqual(result["case_id"], "ESC-B1025")
+        self.assertIn("next_step", result)
+        self.assertIn("B1025", tools._ESCALATIONS)
+
+    def test_high_value_non_collector_return_creates_a_human_review_case(self):
+        # B1008 is $75 (over the $50 autonomous limit) and not a collector
+        # edition — the price-only branch of the review check.
+        result = tools.request_return("B1008", "no longer wanted")
+        self.assertFalse(result["success"])
+        self.assertEqual(result["reason"], "return_requires_review")
+        self.assertEqual(result["status"], "requires_review")
+        self.assertEqual(result["case_id"], "ESC-B1008")
+        self.assertIn("next_step", result)
+        self.assertIn("B1008", tools._ESCALATIONS)
+
+    def test_repeated_review_required_calls_reuse_the_same_escalation_case(self):
+        first = tools.request_return("B1025", "arrived damaged")
+        second = tools.request_return("B1025", "asking again")
+        self.assertEqual(first["case_id"], second["case_id"])
+        self.assertEqual(len(tools._ESCALATIONS), 1)
+
+    def test_normal_low_value_return_does_not_create_an_escalation(self):
+        tools.request_return("B1012", "no longer needed")
+        self.assertNotIn("B1012", tools._ESCALATIONS)
+        self.assertEqual(tools._ESCALATIONS, {})
+
+    def test_denied_returns_do_not_create_an_escalation(self):
+        for order_id in ("B1001", "B1023", "B1024", "B1013"):
+            with self.subTest(order_id=order_id):
+                tools.request_return(order_id, "some reason")
+        self.assertEqual(tools._ESCALATIONS, {})
+
+    def test_return_review_flow_never_issues_a_refund(self):
+        tools.request_return("B1025", "arrived damaged")
+        tools.request_return("B1008", "no longer wanted")
+        self.assertEqual(tools._REFUNDS, {})
+
+    def test_review_required_result_does_not_claim_approval_or_reason_echo(self):
+        result = tools.request_return("B1025", "arrived damaged")
+        self.assertFalse(result["success"])
+        self.assertNotEqual(result["status"], "return_requested")
+
+    def test_rejects_already_returned_order(self):
+        result = tools.request_return("B1013", "book is no longer needed")
+        self.assertFalse(result["success"])
+        self.assertEqual(result["reason"], "already_returned_or_refunded")
+
+    def test_empty_reason_fails(self):
+        result = tools.request_return("B1012", "   ")
+        self.assertFalse(result["success"])
+        self.assertEqual(result["reason"], "reason_required")
+        self.assertEqual(result["status"], "rejected")
+
+    def test_unknown_order_fails_without_exception(self):
+        result = tools.request_return("B9999", "book is no longer needed")
+        self.assertFalse(result["success"])
+        self.assertEqual(result["reason"], "order_not_found")
+
+
+class SearchPolicyTests(ToolTestCase):
+    def test_shipping_query_returns_concrete_shipping_facts(self):
+        result = tools.search_policy("What shipping options do you offer?")
+        self.assertTrue(result["success"])
+        self.assertEqual(result["matches"][0]["topic"], "shipping")
+        self.assertIn("Standard Tracked", result["matches"][0]["content"])
+
+    def test_returns_query_matches_returns_topic(self):
+        result = tools.search_policy("What's your return policy?")
+        self.assertTrue(result["success"])
+        self.assertEqual(result["matches"][0]["topic"], "returns")
+
+    def test_payments_query_matches_payments_topic(self):
+        result = tools.search_policy("What payment methods do you accept?")
+        self.assertTrue(result["success"])
+        self.assertEqual(result["matches"][0]["topic"], "payments")
+
+    def test_password_reset_query_matches_password_reset_topic(self):
+        result = tools.search_policy("I forgot my password.")
+        self.assertTrue(result["success"])
+        self.assertEqual(result["matches"][0]["topic"], "password_reset")
+
+    def test_unknown_query_returns_policy_not_found_without_guessing(self):
+        result = tools.search_policy("Do you sell concert tickets?")
+        self.assertFalse(result["success"])
+        self.assertEqual(result["reason"], "policy_not_found")
+        self.assertEqual(result["matches"], [])
+
+    def test_empty_query_is_rejected(self):
+        result = tools.search_policy("   ")
+        self.assertFalse(result["success"])
+        self.assertEqual(result["reason"], "query_required")
+
+
+class VerifyIdentityAndPasswordResetTests(ToolTestCase):
+    def test_password_reset_blocked_without_prior_verification(self):
+        result = tools.send_password_reset("C1001")
+        self.assertFalse(result["success"])
+        self.assertEqual(result["reason"], "identity_verification_required")
+        self.assertEqual(result["status"], "verification_required")
+
+    def test_password_reset_succeeds_after_matching_verify_identity_call(self):
+        verification = tools.verify_identity("sarah.marlow@example.com")
+        self.assertTrue(verification["success"])
+        self.assertEqual(verification["customer_id"], "C1001")
+
+        result = tools.send_password_reset(verification["customer_id"])
+        self.assertTrue(result["success"])
+        self.assertEqual(result["status"], "reset_link_sent")
+
+    def test_password_reset_is_scoped_to_the_verified_customer_only(self):
+        tools.verify_identity("sarah.marlow@example.com")  # verifies C1001
+        result = tools.send_password_reset("C1002")
+        self.assertFalse(result["success"])
+        self.assertEqual(result["reason"], "identity_verification_required")
+
+    def test_verify_identity_rejects_unmatched_email_without_exception(self):
+        result = tools.verify_identity("nobody@example.com")
+        self.assertFalse(result["success"])
+        self.assertEqual(result["reason"], "identity_not_found")
+
+    def test_verify_identity_rejects_empty_email(self):
+        result = tools.verify_identity("")
+        self.assertFalse(result["success"])
+        self.assertEqual(result["reason"], "email_required")
+
+    def test_a_boolean_can_no_longer_grant_verification(self):
+        # Regression guard for the CX review's core finding: the tool no
+        # longer accepts an identity_verified argument at all, so nothing
+        # the caller passes can substitute for a real verify_identity call.
+        self.assertNotIn("identity_verified", tools.send_password_reset.__code__.co_varnames)
+
+
 class ResetStateTests(ToolTestCase):
     def test_reset_state_clears_all_caches_and_allows_a_fresh_attempt(self):
         tools.issue_refund("B1001", "customer reports non-delivery")
         tools.send_express_replacement("B1001")
         tools.escalate_case("B1002", "collector edition dispute")
+        tools.request_return("B1012", "no longer needed")
+        tools.verify_identity("sarah.marlow@example.com")
         self.assertTrue(tools._REFUNDS)
         self.assertTrue(tools._REPLACEMENTS)
         self.assertTrue(tools._ESCALATIONS)
+        self.assertTrue(tools._RETURNS)
+        self.assertTrue(tools._VERIFIED_IDENTITIES)
 
         tools.reset_state()
 
         self.assertEqual(tools._REFUNDS, {})
         self.assertEqual(tools._REPLACEMENTS, {})
         self.assertEqual(tools._ESCALATIONS, {})
+        self.assertEqual(tools._RETURNS, {})
+        self.assertEqual(tools._VERIFIED_IDENTITIES, set())
+
+    def test_reset_state_revokes_a_previously_verified_identity(self):
+        tools.verify_identity("sarah.marlow@example.com")
+        tools.reset_state()
+
+        result = tools.send_password_reset("C1001")
+
+        self.assertFalse(result["success"])
+        self.assertEqual(result["reason"], "identity_verification_required")
 
 
 class BooklyDataImmutabilityTests(ToolTestCase):
@@ -261,6 +446,16 @@ class BooklyDataImmutabilityTests(ToolTestCase):
         tools.issue_refund("B1022", "customer reports non-delivery")
         tools.issue_refund("B1002", "customer reports non-delivery")
         tools.escalate_case("B1002", "collector edition refund dispute requires human review")
+        tools.request_return("B1012", "no longer needed")
+        tools.request_return("B1023", "changed my mind")
+        tools.request_return("B1024", "found it late")
+        tools.request_return("B1025", "arrived damaged")
+        tools.search_policy("What shipping options do you offer?")
+        tools.search_policy("Do you sell concert tickets?")
+        verification = tools.verify_identity("sarah.marlow@example.com")
+        tools.verify_identity("nobody@example.com")
+        tools.send_password_reset(verification["customer_id"])
+        tools.send_password_reset("C1002")
 
         self.assertEqual(BOOKLY_DATA, snapshot)
 
