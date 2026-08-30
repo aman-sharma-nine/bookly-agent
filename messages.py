@@ -100,48 +100,20 @@ TOOL_MESSAGES: dict[str, dict[str, dict]] = {
             "customer_message": "I need a brief reason for the refund request before I can continue.",
             "next_step": "Once you share the reason, I can continue.",
         },
-        "already_refunded": {
-            "customer_message": "This order has already been refunded.",
-            "next_step": "The original refund confirmation still applies to this order.",
-        },
-        # This rejection is terminal in the sense that it can't be issued
-        # autonomously right now, but it's disputable, not settled — the
-        # package could still turn into a lost-shipment claim. Escalation
-        # is never automatic (see tools.py's escalation_mode="optional"
-        # for this reason); this wording only offers, it doesn't promise.
+        "already_refunded": {"customer_message": "This order has already been refunded."},
         "order_in_transit": {
             "customer_message": "This order is still in transit, so I wasn't able to issue an autonomous refund yet.",
-            "next_step": "I can share the latest tracking status, or ask a specialist to take a look if you'd like.",
+            "next_step": "I can share the latest tracking status, or send this to a specialist if you'd like.",
         },
-        # escalation_mode="required" for this reason: the agent is expected
-        # to call escalate_case for this (see prompts.py), not ask
-        # permission — but issue_refund itself hasn't escalated anything
-        # yet, so this next_step describes what's required, not a
-        # completed action (escalate_case's own success message is what
-        # confirms the case was actually opened).
         "collector_edition_requires_review": {
             "customer_message": "This collector edition needs specialist review before a refund can be issued.",
-            "next_step": "This needs to go to a Bookly specialist for review.",
         },
-        # Terminal (escalation_mode="none"): digital items are never
-        # return/refund eligible, so there is nothing a human review would
-        # change — no specialist-review language belongs here.
         "item_not_return_eligible": {
             "customer_message": "This item isn't eligible for a refund under Bookly's returns policy.",
             "next_step": "Digital books and audiobooks aren't eligible for return; I can help with another question about the order.",
         },
-        # escalation_mode="required" — same rationale as collector edition
-        # above: describe what's required, not a completed escalation.
         "exceeds_autonomous_refund_limit": {
             "customer_message": "This refund amount needs human review before it can be issued.",
-            "next_step": "This needs to go to a Bookly specialist for review.",
-        },
-        # Not a policy decision — a transient failure. escalation_mode=
-        # "optional": never automatic, but retry or specialist review may
-        # be offered.
-        "service_unavailable": {
-            "customer_message": "I wasn't able to reach the refund service right now, so I couldn't complete this request.",
-            "next_step": "I can try again, or ask a specialist to take a look if you'd like.",
         },
         **_ORDER_LOOKUP_OUTCOMES,
     },

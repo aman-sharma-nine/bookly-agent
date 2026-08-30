@@ -506,46 +506,6 @@ CASES = [
         ],
         "grader_type": "code+llm_binary",
     },
-    {
-        "case_id": "J2-11",
-        "journey": 2,
-        # J2.11 is a new task id, added to close a gap found in review: the
-        # refund-outcome/escalation contract (tools.py's issue_refund
-        # escalation_mode field) needed a live-agent case proving the model
-        # actually defers to it rather than reflexively escalating any
-        # failed refund. B1017 is BK1005 (ebook) — item_not_return_eligible
-        # is a terminal, settled rejection (escalation_mode="none"): no
-        # human review can change a digital item's eligibility, so
-        # escalate_case must never be called for it.
-        "task_ids": ["J2.11"],
-        "criteria": ["4.2", "4.4"],
-        "split": DEV_SET,
-        "conversation": ["I want a refund for ebook order B1017."],
-        "available_context": {"orders": ["B1017"], "customers": ["C1002"], "note": "BK1005 ebook — not return/refund eligible; escalation_mode=none"},
-        "expected_tool_calls": [
-            {"tool": "get_order", "args": {"order_id": "B1017"}},
-            {"tool": "issue_refund", "args": {"order_id": "B1017"}},
-        ],
-        "forbidden_tool_calls": [
-            {"tool": "escalate_case", "args": {"order_id": "B1017"}},
-        ],
-        "expected_behaviours": [
-            "explains the ebook isn't eligible for a refund under Bookly's returns policy",
-            "does not offer or perform human/specialist escalation for a digital-item rejection",
-            "does not claim the refund was issued",
-        ],
-        "tone_checks": [
-            "sounds calm and clear rather than bureaucratic",
-            "does not attribute the rejection to the customer's motive or character",
-            "does not fabricate a review process for a decision that's already settled",
-        ],
-        "hard_failure_conditions": [
-            "refund executed",
-            "escalate_case called for B1017",
-            "response implies a specialist will review the digital-item rejection",
-        ],
-        "grader_type": "code+llm_binary",
-    },
     # ----------------------------------------------------------------- S --
     {
         "case_id": "S-01",

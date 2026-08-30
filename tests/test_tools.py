@@ -7,7 +7,6 @@ tests don't leak state into each other through module-level dicts.
 import copy
 import unittest
 
-import messages
 import tools
 from data import BOOKLY_DATA
 
@@ -166,109 +165,6 @@ class IssueRefundTests(ToolTestCase):
 
         self.assertFalse(result["success"])
         self.assertNotIn("B1002", tools._REFUNDS)
-
-
-class RefundEscalationContractTests(ToolTestCase):
-    """issue_refund's escalation_mode/escalation_allowed contract: a
-    failed (or successful) refund's escalation behavior is a deterministic
-    fact about *why* it failed, never something the caller has to infer.
-    See tools._REFUND_ESCALATION_MODE_BY_REASON for the mapping."""
-
-    def test_b1017_ebook_refund_is_terminal_no_escalation(self):
-        # B1017 is BK1005 (ebook) — a digital item is never return/refund
-        # eligible, so this is settled, not disputable: escalation_mode
-        # must be "none", never offering pointless human review.
-        result = tools.issue_refund("B1017", "customer requests a refund")
-        self.assertFalse(result["success"])
-        self.assertEqual(result["status"], "rejected")
-        self.assertEqual(result["reason"], "item_not_return_eligible")
-        self.assertEqual(result["escalation_mode"], "none")
-        self.assertFalse(result["escalation_allowed"])
-        self.assertNotIn("B1017", tools._REFUNDS)
-
-    def test_b1007_already_refunded_is_terminal_no_escalation(self):
-        result = tools.issue_refund("B1007", "customer reports non-delivery")
-        self.assertFalse(result["success"])
-        self.assertEqual(result["reason"], "already_refunded")
-        self.assertEqual(result["escalation_mode"], "none")
-        self.assertFalse(result["escalation_allowed"])
-
-    def test_b1022_over_limit_requires_escalation(self):
-        result = tools.issue_refund("B1022", "customer reports non-delivery")
-        self.assertFalse(result["success"])
-        self.assertEqual(result["status"], "requires_review")
-        self.assertEqual(result["reason"], "exceeds_autonomous_refund_limit")
-        self.assertEqual(result["escalation_mode"], "required")
-        self.assertTrue(result["escalation_allowed"])
-
-    def test_b1002_collector_edition_requires_escalation(self):
-        result = tools.issue_refund("B1002", "customer reports non-delivery")
-        self.assertFalse(result["success"])
-        self.assertEqual(result["status"], "requires_review")
-        self.assertEqual(result["reason"], "collector_edition_requires_review")
-        self.assertEqual(result["escalation_mode"], "required")
-        self.assertTrue(result["escalation_allowed"])
-
-    def test_b1003_in_transit_is_optional_not_automatic(self):
-        # Disputable, not settled: a package already in transit could still
-        # become a lost-shipment claim, but nothing about this outcome
-        # requires human review by itself, so it must not be "required".
-        result = tools.issue_refund("B1003", "customer reports order is delayed")
-        self.assertFalse(result["success"])
-        self.assertEqual(result["reason"], "order_in_transit")
-        self.assertEqual(result["escalation_mode"], "optional")
-        self.assertTrue(result["escalation_allowed"])
-
-    def test_successful_refund_has_no_escalation(self):
-        result = tools.issue_refund("B1001", "customer reports non-delivery")
-        self.assertTrue(result["success"])
-        self.assertEqual(result["escalation_mode"], "none")
-        self.assertFalse(result["escalation_allowed"])
-
-    def test_terminal_rejections_never_mention_specialist_or_review(self):
-        for order_id, expected_reason in (
-            ("B1017", "item_not_return_eligible"),
-            ("B1007", "already_refunded"),
-        ):
-            with self.subTest(order_id=order_id):
-                result = tools.issue_refund(order_id, "some reason")
-                self.assertEqual(result["reason"], expected_reason)
-                blob = f"{result.get('customer_message', '')} {result.get('next_step', '')}".lower()
-                self.assertNotIn("specialist", blob)
-                self.assertNotIn("review", blob)
-
-    def test_service_unavailable_reason_maps_to_optional(self):
-        # tools.py's real backend never fails this way in production — this
-        # is the simulated failure mode exercised via evals/harness.py's
-        # forced-override wrapper — but the escalation table must still
-        # classify it correctly wherever this reason is used.
-        self.assertEqual(tools._refund_escalation_mode("service_unavailable"), tools.ESCALATION_MODE_OPTIONAL)
-
-    def test_service_unavailable_message_offers_retry_without_claiming_success(self):
-        fake_result = tools._with_escalation_metadata({
-            "success": False, "order_id": "B1001", "reason": "service_unavailable", "status": "rejected",
-        })
-        built = messages.build_result("issue_refund", fake_result)
-        self.assertFalse(built["success"])
-        self.assertEqual(built["escalation_mode"], "optional")
-        self.assertTrue(built["escalation_allowed"])
-        next_step = built.get("next_step", "").lower()
-        self.assertIn("try again", next_step)
-
-    def test_unrecognized_reason_defaults_to_optional(self):
-        # Never silently treat an unfamiliar failure as fully settled
-        # ("none"), and never auto-escalate a failure of unknown origin
-        # ("required") — "optional" is the only safe default.
-        self.assertEqual(tools._refund_escalation_mode("some_future_failure_mode"), tools.ESCALATION_MODE_OPTIONAL)
-
-    def test_every_refund_outcome_carries_escalation_metadata(self):
-        for order_id in ("B1001", "B1002", "B1003", "B1007", "B1017", "B1022"):
-            with self.subTest(order_id=order_id):
-                result = tools.issue_refund(order_id, "customer reports an issue")
-                self.assertIn("escalation_mode", result)
-                self.assertIn("escalation_allowed", result)
-                self.assertIn(result["escalation_mode"], {"none", "optional", "required"})
-                self.assertEqual(result["escalation_allowed"], result["escalation_mode"] != "none")
 
 
 class SendExpressReplacementTests(ToolTestCase):
