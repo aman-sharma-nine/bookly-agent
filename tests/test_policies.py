@@ -40,6 +40,16 @@ class RefundAllowedTests(unittest.TestCase):
         self.assertFalse(allowed)
         self.assertEqual(reason, "collector_edition_requires_review")
 
+    def test_b1005_digital_item_is_not_refundable(self):
+        order, book = order_and_book("B1005")
+        self.assertEqual(book["format"], "ebook")
+        self.assertFalse(book["return_eligible"])
+
+        allowed, reason = refund_allowed(order, book)
+
+        self.assertFalse(allowed)
+        self.assertEqual(reason, "item_not_return_eligible")
+
     def test_already_refunded_rejected(self):
         order, book = order_and_book("B1007")
         self.assertGreater(order["refund_amount"], 0)

@@ -37,6 +37,8 @@ class GetOrderTests(ToolTestCase):
         self.assertEqual(result["tracking_status"], "carrier_delay")
         self.assertEqual(result["expected_delivery"], "2026-08-26")
         self.assertIsNone(result["delivered_date"])
+        self.assertEqual(result["format"], "paperback")
+        self.assertTrue(result["return_eligible"])
         self.assertFalse(result["is_collector_edition"])
         self.assertEqual(result["previous_refund_count"], 0)
         self.assertEqual(result["previous_missing_delivery_claims"], 0)
@@ -84,6 +86,13 @@ class IssueRefundTests(ToolTestCase):
         result = tools.issue_refund("B1002", "customer reports non-delivery")
         self.assertFalse(result["success"])
         self.assertEqual(result["reason"], "collector_edition_requires_review")
+
+    def test_b1005_digital_item_refund_is_rejected(self):
+        result = tools.issue_refund("B1005", "customer requests a refund")
+        self.assertFalse(result["success"])
+        self.assertEqual(result["reason"], "item_not_return_eligible")
+        self.assertEqual(result["status"], "rejected")
+        self.assertNotIn("B1005", tools._REFUNDS)
 
     def test_already_refunded_order_fails(self):
         result = tools.issue_refund("B1007", "customer reports non-delivery")
