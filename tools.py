@@ -176,6 +176,69 @@ def send_express_replacement(order_id: str) -> dict:
     return dict(result)
 
 
+# --- issue_refund's escalation contract -------------------------------
+#
+# Whether a failed (or successful) refund should ever reach escalate_case
+# is a deterministic fact about *why* it failed, not a judgement call the
+# model makes from prose. Every issue_refund result carries an
+# `escalation_mode` so the model never has to infer escalation behavior:
+#
+#   "none"     — terminal. The outcome is settled; never escalate, never
+#                offer human review.
+#   "optional" — the rejection may be disputable, or the failure was
+#                transient. Never escalate automatically; may be offered
+#                to (or confirmed with) the customer.
+#   "required" — policy already requires human review. Escalate without
+#                asking permission; never claim the refund was approved.
+ESCALATION_MODE_NONE = "none"
+ESCALATION_MODE_OPTIONAL = "optional"
+ESCALATION_MODE_REQUIRED = "required"
+
+_REFUND_ESCALATION_MODE_BY_REASON = {
+    None: ESCALATION_MODE_NONE,  # success
+    # Terminal rejections: the outcome is settled, nothing a human review
+    # would change.
+    "reason_required": ESCALATION_MODE_NONE,
+    "order_not_found": ESCALATION_MODE_NONE,
+    "book_record_missing": ESCALATION_MODE_NONE,
+    "invalid_record": ESCALATION_MODE_NONE,
+    "already_refunded": ESCALATION_MODE_NONE,
+    "item_not_return_eligible": ESCALATION_MODE_NONE,
+    # Rejected, but potentially disputable — a package already in transit
+    # could still become a lost-shipment claim later. Never automatic.
+    "order_in_transit": ESCALATION_MODE_OPTIONAL,
+    # Policy already requires human review for these — escalate
+    # automatically, no customer confirmation needed.
+    "exceeds_autonomous_refund_limit": ESCALATION_MODE_REQUIRED,
+    "collector_edition_requires_review": ESCALATION_MODE_REQUIRED,
+    # Not a policy decision at all — a transient failure. Never automatic,
+    # but retry or specialist review may be offered.
+    "service_unavailable": ESCALATION_MODE_OPTIONAL,
+}
+
+
+def _refund_escalation_mode(reason: str | None) -> str:
+    """Deterministic escalation mode for one issue_refund outcome.
+
+    An unrecognized reason (a failure this table doesn't know about yet)
+    defaults to "optional" — never silently treat an unfamiliar failure as
+    fully settled ("none"), and never auto-escalate a failure of unknown
+    origin ("required").
+    """
+    return _REFUND_ESCALATION_MODE_BY_REASON.get(reason, ESCALATION_MODE_OPTIONAL)
+
+
+def _with_escalation_metadata(result: dict) -> dict:
+    """Attach escalation_mode/escalation_allowed to a not-yet-built refund
+    result dict, keyed off the `reason` it already carries. Called before
+    messages.build_result so the escalation fields are already present by
+    the time the customer-facing message is attached."""
+    mode = _refund_escalation_mode(result.get("reason"))
+    result["escalation_mode"] = mode
+    result["escalation_allowed"] = mode != ESCALATION_MODE_NONE
+    return result
+
+
 def issue_refund(order_id: str, reason: str) -> dict:
     """Simulate issuing a refund for an order, subject to policy.
 
@@ -195,41 +258,55 @@ def issue_refund(order_id: str, reason: str) -> dict:
         hard-policy failure (e.g. already refunded, bad input),
         "requires_review" when the refund is simply outside autonomous
         authority (over the limit, or a collector edition) rather than
-        invalid. On success, also includes a deterministic `refund_id`
-        (for example, a `REF-` identifier), `amount`, and `currency`. Idempotent: a
-        second call for an order that already has an issued refund
-        returns the same refund_id rather than creating a second one.
-        Independently enforces (via policies.refund_allowed, not this
-        prompt): a refund above the autonomous limit is rejected, a
-        collector edition is rejected, and an already-refunded order is
-        rejected — regardless of what the calling agent requests.
+        invalid. Every result — success or failure — also includes
+        `escalation_mode` ("none" | "optional" | "required") and
+        `escalation_allowed` (its boolean equivalent), so the caller never
+        has to infer from `status`/`reason` alone whether escalate_case is
+        appropriate: see `_REFUND_ESCALATION_MODE_BY_REASON` above for the
+        exact mapping. On success, also includes a deterministic
+        `refund_id` (for example, a `REF-` identifier), `amount`, and
+        `currency`. Idempotent: a second call for an order that already
+        has an issued refund returns the same refund_id rather than
+        creating a second one. Independently enforces (via
+        policies.refund_allowed, not this prompt): a refund above the
+        autonomous limit is rejected, a collector edition is rejected, and
+        an already-refunded order is rejected — regardless of what the
+        calling agent requests.
     """
     normalized_id = _normalize_order_id(order_id)
 
     if not reason or not reason.strip():
-        return messages.build_result("issue_refund", {"success": False, "order_id": normalized_id, "reason": "reason_required", "status": "rejected"})
+        return messages.build_result("issue_refund", _with_escalation_metadata(
+            {"success": False, "order_id": normalized_id, "reason": "reason_required", "status": "rejected"}
+        ))
 
     if normalized_id in _REFUNDS:
         return dict(_REFUNDS[normalized_id])
 
     order = _lookup_order(normalized_id)
     if order is None:
-        return messages.build_result("issue_refund", {"success": False, "order_id": normalized_id, "reason": "order_not_found", "status": "rejected"})
+        return messages.build_result("issue_refund", _with_escalation_metadata(
+            {"success": False, "order_id": normalized_id, "reason": "order_not_found", "status": "rejected"}
+        ))
 
     book = _lookup_book(order["book_id"])
     if book is None:
-        return messages.build_result("issue_refund", {"success": False, "order_id": normalized_id, "reason": "book_record_missing", "status": "rejected"})
+        return messages.build_result("issue_refund", _with_escalation_metadata(
+            {"success": False, "order_id": normalized_id, "reason": "book_record_missing", "status": "rejected"}
+        ))
 
     allowed, policy_reason = refund_allowed(order, book)
     if not allowed:
         needs_review = policy_reason in {"exceeds_autonomous_refund_limit", "collector_edition_requires_review"}
         status = "requires_review" if needs_review else "rejected"
-        return messages.build_result("issue_refund", {"success": False, "order_id": normalized_id, "reason": policy_reason, "status": status})
+        return messages.build_result("issue_refund", _with_escalation_metadata(
+            {"success": False, "order_id": normalized_id, "reason": policy_reason, "status": status}
+        ))
 
     amount = round(order["unit_price"] * order["quantity"], 2)
     result = messages.build_result(
         "issue_refund",
-        {
+        _with_escalation_metadata({
             "success": True,
             "order_id": normalized_id,
             "reason": None,
@@ -237,7 +314,7 @@ def issue_refund(order_id: str, reason: str) -> dict:
             "amount": amount,
             "currency": order["currency"],
             "status": "issued",
-        },
+        }),
         dynamic_message=messages.issue_refund_success_message(amount, order["currency"]),
     )
     _REFUNDS[normalized_id] = result
