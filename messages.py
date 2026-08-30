@@ -104,6 +104,10 @@ TOOL_MESSAGES: dict[str, dict[str, dict]] = {
         "collector_edition_requires_review": {
             "customer_message": "This collector edition needs specialist review before a refund can be issued.",
         },
+        "item_not_return_eligible": {
+            "customer_message": "This item isn't eligible for a refund under Bookly's returns policy.",
+            "next_step": "Digital books and audiobooks aren't eligible for return; I can help with another question about the order.",
+        },
         "exceeds_autonomous_refund_limit": {
             "customer_message": "This refund amount needs human review before it can be issued.",
         },

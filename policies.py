@@ -31,8 +31,8 @@ def refund_allowed(order: dict, book: dict) -> tuple[bool, str]:
     This does not perform the refund — it only answers whether tools.py's
     issue_refund is permitted to. Checked in this order: record validity,
     whether the order was already refunded, whether the order is still
-    in transit, the collector-edition override, then the autonomous
-    refund value limit.
+    in transit, whether the item is return/refund eligible, the
+    collector-edition override, then the autonomous refund value limit.
 
     Args:
         order: The order record from BOOKLY_DATA["orders"] (or an
@@ -41,7 +41,7 @@ def refund_allowed(order: dict, book: dict) -> tuple[bool, str]:
             and "tracking_status").
         book: The book record from BOOKLY_DATA["books"] for
             order["book_id"] (must contain at least
-            "is_collector_edition").
+            "is_collector_edition", "format", and "return_eligible").
 
     Returns:
         A (allowed, reason) tuple. reason is always a stable,
@@ -56,6 +56,11 @@ def refund_allowed(order: dict, book: dict) -> tuple[bool, str]:
 
     if _order_in_transit(order):
         return False, "order_in_transit"
+
+    # Digital and otherwise ineligible items cannot be refunded through the
+    # physical-book support flow, regardless of their value.
+    if not book.get("return_eligible", False) or book.get("format") in {"ebook", "audiobook"}:
+        return False, "item_not_return_eligible"
 
     if _POLICIES["collector_edition_requires_review"] and book["is_collector_edition"]:
         return False, "collector_edition_requires_review"
@@ -151,4 +156,5 @@ def _looks_like_replacement_order(order: dict) -> bool:
 
 
 def _looks_like_book(book: dict) -> bool:
-    return isinstance(book, dict) and "is_collector_edition" in book
+    required = {"is_collector_edition", "format", "return_eligible"}
+    return isinstance(book, dict) and required.issubset(book)

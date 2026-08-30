@@ -78,8 +78,9 @@ def get_order(order_id: str) -> dict:
         `tracking_status`, `expected_delivery`, `delivered_date`,
         `is_collector_edition`, `previous_refund_count`,
         `previous_missing_delivery_claims`,
-        `express_replacement_available`, `express_replacement_eta`, and
-        `issue_tags`. Never includes customer email, address, or payment
+        `express_replacement_available`, `express_replacement_eta`,
+        `issue_tags`, `format`, and `return_eligible`. Never includes
+        customer email, address, or payment
         method — the agent doesn't need them for either hero journey. An
         unknown order ID returns `success=False` with `reason` set; it
         never raises.
@@ -100,6 +101,8 @@ def get_order(order_id: str) -> dict:
         "order_id": normalized_id,
         "reason": None,
         "book_title": book["title"],
+        "format": book["format"],
+        "return_eligible": book["return_eligible"],
         "quantity": order["quantity"],
         "total_value": round(order["unit_price"] * order["quantity"], 2),
         "currency": order["currency"],
