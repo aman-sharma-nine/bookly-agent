@@ -75,6 +75,10 @@ TOOL_MESSAGES: dict[str, dict[str, dict]] = {
             "customer_message": "An express replacement isn't available for this order right now.",
             "next_step": "I can look at other options, like a refund, if you'd like.",
         },
+        "digital_item_not_shippable": {
+            "customer_message": "This is a digital item, so there's no physical parcel to replace.",
+            "next_step": "I can help with another question about the order.",
+        },
         "order_in_transit": {
             "customer_message": "This order is already moving through the carrier network, so I wasn't able to create a duplicate replacement.",
             "next_step": "I can share the latest tracking status instead.",

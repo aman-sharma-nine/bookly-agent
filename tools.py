@@ -320,10 +320,15 @@ def request_return(order_id: str, reason: str) -> dict:
         return messages.build_result("request_return", {"success": False, "order_id": normalized_id, "reason": "book_record_missing", "status": "rejected"})
     if order.get("refund_amount", 0) > 0 or order.get("fulfillment_status") == "returned":
         return messages.build_result("request_return", {"success": False, "order_id": normalized_id, "reason": "already_returned_or_refunded", "status": "rejected"})
-    if order.get("fulfillment_status") != "delivered" or not order.get("delivered_date"):
-        return messages.build_result("request_return", {"success": False, "order_id": normalized_id, "reason": "order_not_delivered", "status": "rejected"})
+    # Return eligibility is a book-level policy fact, checked independently
+    # of (and before) the order's own fulfillment display — a digital order
+    # is never return-eligible regardless of its (digital-specific)
+    # fulfillment_status value, so this must not be masked by the
+    # order_not_delivered check below.
     if not book.get("return_eligible", False):
         return messages.build_result("request_return", {"success": False, "order_id": normalized_id, "reason": "item_not_return_eligible", "status": "rejected"})
+    if order.get("fulfillment_status") != "delivered" or not order.get("delivered_date"):
+        return messages.build_result("request_return", {"success": False, "order_id": normalized_id, "reason": "order_not_delivered", "status": "rejected"})
     if order.get("return_window_ends") and date.fromisoformat(BOOKLY_DATA["as_of_date"]) > date.fromisoformat(order["return_window_ends"]):
         return messages.build_result("request_return", {"success": False, "order_id": normalized_id, "reason": "return_window_expired", "status": "rejected"})
 

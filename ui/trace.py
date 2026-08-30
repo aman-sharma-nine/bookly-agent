@@ -190,6 +190,7 @@ def _failure_card(event: dict[str, Any]) -> dict[str, Any]:
     if tool == "send_express_replacement" and reason in {
         "express_replacement_unavailable",
         "collector_edition_requires_review",
+        "digital_item_not_shippable",
     }:
         return {
             "state": "blocked",

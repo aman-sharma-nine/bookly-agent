@@ -221,10 +221,12 @@ class B1023RegressionTests(unittest.TestCase):
 
     def test_b1023_book_is_actually_an_ebook_in_the_dataset(self):
         # Sanity check that this test is exercising the scenario it claims
-        # to — B1023 must really be a delivered, non-return-eligible ebook.
+        # to — B1023 must really be a delivered (digital-fulfillment),
+        # non-return-eligible ebook.
         order = BOOKLY_DATA["orders"]["B1023"]
         book = BOOKLY_DATA["books"][order["book_id"]]
-        self.assertEqual(order["fulfillment_status"], "delivered")
+        self.assertEqual(order["fulfillment_status"], "digital_delivered")
+        self.assertIsNotNone(order["delivered_date"])
         self.assertFalse(book["return_eligible"])
         self.assertEqual(book["format"], "ebook")
 

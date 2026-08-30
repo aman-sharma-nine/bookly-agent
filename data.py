@@ -1336,3 +1336,77 @@ BOOKLY_DATA = {
         }
     }
 }
+
+
+# --- Digital-order normalization -------------------------------------------
+#
+# Digital items (ebooks, audiobooks) have no carrier, no parcel, and no
+# delivery ETA — they cannot legitimately carry physical-shipment fields.
+# Rather than trust every order literal above to have been hand-authored
+# correctly (and rather than trust the LLM prompt to describe these orders
+# accurately at conversation time), every order is normalized here,
+# deterministically, right after BOOKLY_DATA is built. This is the single
+# place that decides what a digital order's fulfillment fields look like —
+# any order added to BOOKLY_DATA["orders"] in the future for a digital book
+# is normalized the same way, with no extra wiring required.
+DIGITAL_FORMATS = {"ebook", "audiobook"}
+
+# fulfillment_status values that only make sense once a physical parcel
+# actually moved — remapped to a digital-specific equivalent so the status
+# never implies a shipment.
+_DIGITAL_FULFILLMENT_STATUS_MAP = {
+    "delivered": "digital_delivered",
+    "shipped": "digital_fulfilled",
+}
+
+# issue tags that describe a physical-shipment problem (carrier delays,
+# lost/returned parcels, and the like) — meaningless, and misleading, on a
+# digital order.
+_PHYSICAL_SHIPMENT_ISSUE_TAGS = {
+    "delayed",
+    "carrier_delay",
+    "missing_delivery",
+    "lost_shipment",
+    "late_delivery",
+    "return_requested",
+    "returned",
+    "return_window_expired",
+    "international",
+}
+
+
+def _normalize_digital_order(order: dict) -> None:
+    """Force one order dict into a digital-safe shape, in place."""
+    order["shipping_method"] = None
+    order["tracking_status"] = "not_applicable"
+    order["expected_delivery"] = None
+    order["fulfillment_status"] = _DIGITAL_FULFILLMENT_STATUS_MAP.get(
+        order.get("fulfillment_status"), order.get("fulfillment_status")
+    )
+    # delivered_date is left as-is: it already reflects the digital
+    # fulfillment/download date when one exists, and None otherwise.
+    order["express_replacement_available"] = False
+    order["express_replacement_eta"] = None
+    order["express_replacement_cost_to_bookly"] = None
+    order["issue_tags"] = [
+        tag for tag in order.get("issue_tags", []) if tag not in _PHYSICAL_SHIPMENT_ISSUE_TAGS
+    ]
+
+
+def normalize_digital_orders(data: dict) -> None:
+    """Normalize every order in `data` whose book is a digital format.
+
+    Called once below for BOOKLY_DATA itself, and safe to call again on any
+    dict shaped like BOOKLY_DATA (e.g. a test fixture) — this is the
+    centralized, deterministic rule referenced above: a digital order can
+    never end up with a physical shipping method, a carrier tracking
+    status, or a delivery ETA, no matter how it was authored.
+    """
+    books = data.get("books", {})
+    for order in data.get("orders", {}).values():
+        book = books.get(order.get("book_id"))
+        if book is not None and book.get("format") in DIGITAL_FORMATS:
+            _normalize_digital_order(order)
+
+
+normalize_digital_orders(BOOKLY_DATA)

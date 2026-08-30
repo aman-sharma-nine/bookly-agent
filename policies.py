@@ -12,7 +12,7 @@ Policy values themselves live in data.py (BOOKLY_DATA["policies"]) since
 they're part of the demo dataset, not hardcoded business logic.
 """
 
-from data import BOOKLY_DATA
+from data import BOOKLY_DATA, DIGITAL_FORMATS
 
 _POLICIES = BOOKLY_DATA["policies"]
 
@@ -59,7 +59,7 @@ def refund_allowed(order: dict, book: dict) -> tuple[bool, str]:
 
     # Digital and otherwise ineligible items cannot be refunded through the
     # physical-book support flow, regardless of their value.
-    if not book.get("return_eligible", False) or book.get("format") in {"ebook", "audiobook"}:
+    if not book.get("return_eligible", False) or book.get("format") in DIGITAL_FORMATS:
         return False, "item_not_return_eligible"
 
     if _POLICIES["collector_edition_requires_review"] and book["is_collector_edition"]:
@@ -118,6 +118,13 @@ def replacement_allowed(order: dict, book: dict) -> tuple[bool, str]:
     """
     if not _looks_like_replacement_order(order) or not _looks_like_book(book):
         return False, "invalid_record"
+
+    # Digital items have no physical parcel to re-send. Checked before the
+    # order's own express_replacement_available/eta fields so a digital
+    # order can never trigger this workflow, even if those fields were
+    # ever set incorrectly upstream.
+    if book.get("format") in DIGITAL_FORMATS:
+        return False, "digital_item_not_shippable"
 
     if _POLICIES["replacement_limit"] < 1:
         return False, "replacement_limit_reached"
