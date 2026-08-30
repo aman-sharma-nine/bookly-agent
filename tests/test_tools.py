@@ -166,6 +166,18 @@ class IssueRefundTests(ToolTestCase):
         self.assertFalse(result["success"])
         self.assertNotIn("B1002", tools._REFUNDS)
 
+    def test_b1017_ebook_refund_is_rejected_and_never_escalated(self):
+        # B1017 is BK1005 (ebook) — a digital item is never return/refund
+        # eligible. This is a terminal rejection: issue_refund itself never
+        # calls escalate_case (it only decides success/reason/status), and
+        # nothing about this outcome should leave an escalation behind.
+        result = tools.issue_refund("B1017", "customer requests a refund")
+        self.assertFalse(result["success"])
+        self.assertEqual(result["reason"], "item_not_return_eligible")
+        self.assertEqual(result["status"], "rejected")
+        self.assertNotIn("B1017", tools._REFUNDS)
+        self.assertNotIn("B1017", tools._ESCALATIONS)
+
 
 class SendExpressReplacementTests(ToolTestCase):
     def test_b1001_succeeds_with_confirmed_eta(self):

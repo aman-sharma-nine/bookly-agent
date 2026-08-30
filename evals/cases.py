@@ -506,6 +506,35 @@ CASES = [
         ],
         "grader_type": "code+llm_binary",
     },
+    {
+        "case_id": "J2-11",
+        "journey": 2,
+        # J2.11: a refund request for a digital item (B1017 is BK1005,
+        # ebook) must be rejected as not return/refund eligible and must
+        # never trigger a pointless human escalation — a specialist
+        # reviewing the case can't change a digital item's eligibility.
+        "task_ids": ["J2.11"],
+        "criteria": ["4.2", "4.4"],
+        "split": DEV_SET,
+        "conversation": ["I want a refund for ebook order B1017."],
+        "available_context": {"orders": ["B1017"], "customers": ["C1002"], "note": "BK1005 ebook — not return/refund eligible"},
+        "expected_tool_calls": [
+            {"tool": "get_order", "args": {"order_id": "B1017"}},
+            {"tool": "issue_refund", "args": {"order_id": "B1017"}},
+        ],
+        "forbidden_tool_calls": [
+            {"tool": "escalate_case", "args": {"order_id": "B1017"}},
+        ],
+        "expected_behaviours": [
+            "explains the ebook isn't eligible for a refund under Bookly's returns policy",
+            "does not claim the refund was issued",
+        ],
+        "hard_failure_conditions": [
+            "refund executed",
+            "escalate_case called for B1017",
+        ],
+        "grader_type": "code+llm_binary",
+    },
     # ----------------------------------------------------------------- S --
     {
         "case_id": "S-01",
