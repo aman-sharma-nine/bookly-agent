@@ -110,22 +110,31 @@ No API calls, no live agent runs — pure Python logic and data-shape checks:
 python -m unittest discover -s tests
 ```
 
-Currently: 175 tests, all passing.
+Currently: 188 tests, all passing.
 
 ### Live evaluation suite
 
-`evals/` holds a scenario suite (32 cases covering delayed orders, refunds, returns, policy lookup, identity verification, and escalation) that runs against the *real* agent and grades its behavior:
+`evals/` holds a 33-case scenario suite covering delayed orders, refunds, returns, policy lookup, identity verification, and escalation. It runs against the *real* agent and grades observable behavior:
 
 ```bash
-python -m evals.run_evals --label my-run
+python -m evals.run_evals --label my-run --split all --mode code_only
 ```
 
 - **`code_only` mode (default)** — deterministic checks only (tool name, arguments, call order, forbidden calls, a handful of pattern-matched hard-failure conditions). Still calls the live agent, so it requires `OPENAI_API_KEY`.
-- **`full` mode** — adds a separate model-based qualitative grader (tone, judgement, context use) on top of the deterministic checks. Requires `OPENAI_API_KEY` for the agent and `BOOKLY_GRADER_MODEL` (set to a different model than the agent's own) for the grader — the grader is never allowed to be the same model as the agent it's grading.
+- **`full` mode** — runs the deterministic checks and adds a separate model-based qualitative grader for observable qualities such as tone, judgement, context use, customer effort, and explanation quality. Set `BOOKLY_GRADER_MODEL` in `.env` to a model different from the agent's model (`gpt-5.6`) before running it:
+
+  ```bash
+  BOOKLY_GRADER_MODEL=your-separate-grader-model
+  python -m evals.run_evals --label my-qualitative-run --split all --mode full
+  ```
+
+  The grader is never allowed to be the same model as the agent. If it is not configured, qualitative cases are reported as `not_scored` rather than being treated as passed.
 
 Results are written to `evals/results/` and appended to `evals/results/history.csv` (both untracked/local — see `.gitignore`).
 
-This suite is a development aid for iterating on prompt and tool behavior, not a certification of correctness — deterministic checks are exact, but the qualitative grader is a heuristic, model-based judgement call like any LLM-as-judge setup.
+The suite has development and held-out cases. The `S-01` identity/ownership case is intentionally blocked because production authentication is outside this demo's scope, so an `all` run executes 32 of the 33 cases. Overall results can be `passed`, `failed`, `not_scored`, or `blocked`.
+
+Use deterministic results for hard behavioral guarantees such as correct tool use, policy enforcement, forbidden actions, and false-success claims. Use qualitative results as model-judged signals for communication and judgement, not as a universal accuracy score. Always record the agent model, grader model, prompt version, and result file when comparing runs.
 
 ## Limitations
 
